@@ -74,3 +74,26 @@
 - `src/lib/paramCompatibility.ts`、`src/lib/persistedState.ts`、`src/store.ts`、`src/types.ts`：新增模型参数、持久化兼容、任务路由与输入限制。
 - `src/lib/apiProfiles.test.ts`、`src/lib/devProxy.test.ts`、`src/lib/fixedApiProfiles.test.ts`、`src/lib/geminiImageApi.test.ts`、`src/store.test.ts`：覆盖新配置、路径、请求与迁移行为。
 - 回滚：推送后执行 `git revert <本次提交哈希>`；GitHub 仓库重命名可用 `gh repo rename gpt-image-playground-fixed --repo diaomin66/meinianda-image-playground --yes` 回滚名称。
+
+## 2026-08-02 - Task: 发布 GitHub 并完成本地生产部署
+
+### What was done
+
+- 将功能提交 `d8f8942` 推送到 GitHub `main`，并将公开仓库重命名为 `diaomin66/meinianda-image-playground`。
+- 更新本地 `deployment` remote 指向重命名后的仓库，并确认远端 `main` 可读取。
+- 启动 Vite 生产预览，本地服务固定监听 `http://127.0.0.1:4173/`。
+
+### Testing
+
+- 完整 `npm test`：32 个测试文件、407 项测试全部通过。
+- 完整 `npm run build`：通过。
+- GitHub 仓库主页：HTTP 200，默认分支为 `main`，页面可识别新品牌名称。
+- GitHub Actions：Vercel 发布工作流运行成功；仓库未设置 `VERCEL_DEPLOY_HOOK`，因此明确跳过云端 Vercel 触发。
+- 本地生产预览：HTTP 200，页面标题包含 `Meinianda Image Playground`，监听进程 PID 为 `66448`。
+
+### Notes
+
+- `progress.md`：追加 GitHub 发布、仓库重命名、云端部署条件和本地部署验证记录。
+- 回滚代码：执行 `git revert d8f8942` 后推送 `main`。
+- 回滚仓库名称：执行 `gh repo rename gpt-image-playground-fixed --repo diaomin66/meinianda-image-playground --yes`。
+- 停止本地服务：执行 `Stop-Process -Id 66448`。
