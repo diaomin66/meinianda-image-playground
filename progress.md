@@ -136,3 +136,23 @@
 - `src/store.ts`：更新 Gemini 遮罩限制提示。
 - `progress.md`：追加本轮实现、验证和回滚记录。
 - 回滚：推送后执行 `git revert <本次提交哈希>` 并推送 `main`。
+
+## 2026-08-02 - Task: 发布 v0.8.1 到 GitHub 并确认本地部署
+
+### What was done
+
+- 将功能提交 `6c03331` 推送到 GitHub 仓库 `diaomin66/meinianda-image-playground` 的 `main`。
+- 确认远端 `main` 与本地功能提交一致，并完成 GitHub Actions 发布工作流检查。
+- 保持本地 Vite 生产预览监听 `http://127.0.0.1:4173/`。
+
+### Testing
+
+- `git ls-remote deployment refs/heads/main`：远端 `main` 为 `6c03331d51f0c7ec854ea93d45f4a9b588c83d2f`。
+- GitHub Actions `Trigger Vercel Release Deploy`：运行 `30734694404` 成功；版本检查通过，仓库未配置 `VERCEL_DEPLOY_HOOK`，因此钩子调用步骤明确跳过。
+- 本地生产预览：HTTP 200，页面标题匹配 `Meinianda Image Playground`，监听进程 PID 为 `66448`。
+
+### Notes
+
+- `progress.md`：追加本次 GitHub 推送、发布工作流和本地服务验证证据。
+- 回滚功能提交：执行 `git revert 6c03331` 后推送 `main`。
+- 停止本地服务：执行 `Stop-Process -Id 66448`。
