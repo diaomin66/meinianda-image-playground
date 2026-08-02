@@ -36,35 +36,14 @@ function safeUrl(url: string) {
 }
 
 const markdownComponents: Components = {
-  a({ children, href, node: _node, ...props }) {
-    const shouldOpenBlank = Boolean(href && href !== '#blocked')
-    return (
-      <a
-        {...props}
-        href={href}
-        rel={shouldOpenBlank ? 'noreferrer' : undefined}
-        target={shouldOpenBlank ? '_blank' : undefined}
-      >
-        {children}
-      </a>
-    )
+  a({ children }) {
+    return <span>{children}</span>
   },
 }
 
 const legacyMarkdownComponents: ReactMarkdownComponents = {
-  a({ children, href, ...props }) {
-    const safeHref = safeUrl(href ?? '')
-    const shouldOpenBlank = safeHref !== '#blocked'
-    return (
-      <a
-        {...props}
-        href={safeHref}
-        rel={shouldOpenBlank ? 'noreferrer' : undefined}
-        target={shouldOpenBlank ? '_blank' : undefined}
-      >
-        {children}
-      </a>
-    )
+  a({ children }) {
+    return <span>{children}</span>
   },
 }
 

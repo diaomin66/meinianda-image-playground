@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { strToU8, zipSync } from 'fflate'
 import { DEFAULT_PARAMS } from './types'
 import { createDefaultFalProfile, createDefaultOpenAIProfile, DEFAULT_RESPONSES_MODEL, DEFAULT_SETTINGS, normalizeSettings } from './lib/apiProfiles'
+import { FIXED_API_BASE_URL, FIXED_IMAGE_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID } from './lib/fixedApiProfiles'
 import type { AgentConversation, ExportData, StoredImage, StoredImageThumbnail, TaskRecord } from './types'
 import { getSelectedImageMentionLabel } from './lib/promptImageMentions'
 import { hasActiveDataOperations } from './lib/dataOperations'
@@ -2307,7 +2308,7 @@ describe('data import', () => {
     expect(collectionIds.filter((id) => id === sharedCollection.id)).toHaveLength(1)
   })
 
-  it('deduplicates shared config when merging multiple regular backups', async () => {
+  it('keeps only fixed API configurations when importing multiple regular backups', async () => {
     const sharedProfile = createDefaultOpenAIProfile({ id: 'regular-profile-shared', name: '共享配置', apiKey: 'shared-key' })
     const profileA = createDefaultOpenAIProfile({ id: 'regular-profile-a', name: '普通配置 A', apiKey: 'key-a' })
     const profileB = createDefaultOpenAIProfile({ id: 'regular-profile-b', name: '普通配置 B', apiKey: 'key-b' })
@@ -2324,10 +2325,10 @@ describe('data import', () => {
 
     const imported = await importData([backupA, backupB], { importConfig: true, importTasks: false })
 
-    const apiKeys = useStore.getState().settings.profiles.map((profile) => profile.apiKey)
+    const profiles = useStore.getState().settings.profiles
     expect(imported).toBe(true)
-    expect(apiKeys).toEqual(expect.arrayContaining(['shared-key', 'key-a', 'key-b']))
-    expect(apiKeys.filter((apiKey) => apiKey === 'shared-key')).toHaveLength(1)
+    expect(profiles.map((profile) => profile.id)).toEqual([FIXED_IMAGE_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID])
+    expect(profiles.every((profile) => profile.baseUrl === FIXED_API_BASE_URL)).toBe(true)
   })
 
   it('rejects an incomplete multipart backup before importing data', async () => {
@@ -4830,13 +4831,13 @@ describe('reused task API profile', () => {
     expect(state.prompt).toBe(taskPrompt)
   })
 
-  it('clears temporary reuse when switching current settings to the reused API profile', async () => {
+  it('keeps the fixed image profile and clears invalid temporary reuse', async () => {
     await reuseConfig(task({ apiProvider: 'fal', apiProfileId: falProfile.id }))
 
     useStore.getState().setSettings({ activeProfileId: falProfile.id })
 
     const state = useStore.getState()
-    expect(state.settings.activeProfileId).toBe(falProfile.id)
+    expect(state.settings.activeProfileId).toBe(FIXED_IMAGE_PROFILE_ID)
     expect(state.reusedTaskApiProfileId).toBeNull()
     expect(state.reusedTaskApiProfileMissing).toBe(false)
   })
