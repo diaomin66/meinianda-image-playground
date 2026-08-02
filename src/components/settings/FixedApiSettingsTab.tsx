@@ -26,7 +26,7 @@ const CONFIGURATIONS = [
     id: FIXED_GEMINI_PROFILE_ID,
     title: 'Gemini 生图配置',
     baseUrl: FIXED_GEMINI_API_BASE_URL,
-    endpoint: 'Interactions API (/v1beta/interactions)',
+    endpoint: 'generateContent API (/v1beta/models/{model}:generateContent)',
     description: `用于画廊 Gemini 生图与编辑，可选 ${FIXED_GEMINI_MODELS.join('、')}。`,
   },
   {

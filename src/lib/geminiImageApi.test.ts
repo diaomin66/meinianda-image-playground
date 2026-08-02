@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PARAMS } from '../types'
 import { callImageApi } from './api'
@@ -30,20 +32,53 @@ function createGeminiSettings(model = GEMINI_FLASH_IMAGE_MODEL) {
   })
 }
 
+function mockImageConversion(width: number, height: number) {
+  const drawImage = vi.fn()
+  const fillRect = vi.fn()
+  const toDataURL = vi.fn((type: string) => `data:${type};base64,Y29udmVydGVk`)
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: () => ({
+      drawImage,
+      fillRect,
+      fillStyle: '',
+    }),
+    toDataURL,
+  } as unknown as HTMLCanvasElement
+  const originalCreateElement = document.createElement.bind(document)
+  vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) =>
+    tagName === 'canvas' ? canvas : originalCreateElement(tagName)) as typeof document.createElement)
+  vi.stubGlobal('Image', class {
+    naturalWidth = width
+    naturalHeight = height
+    onload: (() => void) | null = null
+
+    set src(_value: string) {
+      queueMicrotask(() => this.onload?.())
+    }
+  })
+  return { drawImage, fillRect, toDataURL }
+}
+
 describe('Gemini image API', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
-  it('uses the v1beta Interactions API with official image parameters', async () => {
+  it('uses the v1beta generateContent API with official image parameters', async () => {
+    const conversion = mockImageConversion(2048, 1152)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      steps: [{
-        type: 'model_output',
-        content: [{
-          type: 'image',
-          data: 'ZmluYWw=',
-          mime_type: 'image/png',
-        }],
+      candidates: [{
+        content: {
+          parts: [{
+            inlineData: {
+              data: 'ZmluYWw=',
+              mimeType: 'image/jpeg',
+            },
+          }],
+        },
       }],
     }), {
       status: 200,
@@ -63,34 +98,35 @@ describe('Gemini image API', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://meinianda.top/v1beta/interactions',
+      `https://meinianda.top/v1beta/models/${GEMINI_FLASH_IMAGE_MODEL}:generateContent?key=gemini-key`,
       expect.objectContaining({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': 'gemini-key',
         },
       }),
     )
     const body = JSON.parse(String((fetchMock.mock.calls[0][1] as RequestInit).body))
     expect(body).toEqual({
-      model: GEMINI_FLASH_IMAGE_MODEL,
-      input: [
-        { type: 'text', text: '生成一张海报' },
-        { type: 'image', data: 'aW5wdXQ=', mime_type: 'image/jpeg' },
-      ],
-      response_format: {
-        type: 'image',
-        mime_type: 'image/png',
-        image_size: '2K',
-        aspect_ratio: '16:9',
-      },
-      generation_config: {
-        thinking_level: 'high',
+      contents: [{
+        parts: [
+          { text: '生成一张海报' },
+          { inlineData: { data: 'aW5wdXQ=', mimeType: 'image/jpeg' } },
+        ],
+      }],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        imageConfig: {
+          aspectRatio: '16:9',
+          imageSize: '2K',
+        },
+        thinkingConfig: {
+          thinkingLevel: 'High',
+        },
       },
     })
     expect(result).toEqual({
-      images: ['data:image/png;base64,ZmluYWw='],
+      images: ['data:image/png;base64,Y29udmVydGVk'],
       actualParams: {
         aspect_ratio: '16:9',
         output_format: 'png',
@@ -102,21 +138,30 @@ describe('Gemini image API', () => {
         n: 1,
       }],
     })
+    expect(conversion.fillRect).not.toHaveBeenCalled()
+    expect(conversion.drawImage).toHaveBeenCalledTimes(1)
+    expect(conversion.toDataURL).toHaveBeenCalledWith('image/png')
   })
 
   it('omits Flash-only thinking configuration for Gemini Pro', async () => {
+    const conversion = mockImageConversion(2048, 2048)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      output_image: {
-        type: 'image',
-        data: 'cHJv',
-        mime_type: 'image/jpeg',
-      },
+      candidates: [{
+        content: {
+          parts: [{
+            inlineData: {
+              data: 'cHJv',
+              mimeType: 'image/png',
+            },
+          }],
+        },
+      }],
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     }))
 
-    await callImageApi({
+    const result = await callImageApi({
       settings: createGeminiSettings(GEMINI_PRO_IMAGE_MODEL),
       prompt: '产品图',
       params: {
@@ -128,24 +173,37 @@ describe('Gemini image API', () => {
     })
 
     const body = JSON.parse(String((fetchMock.mock.calls[0][1] as RequestInit).body))
-    expect(body.model).toBe(GEMINI_PRO_IMAGE_MODEL)
-    expect(body.response_format).toMatchObject({
-      mime_type: 'image/jpeg',
-      image_size: '4K',
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `https://meinianda.top/v1beta/models/${GEMINI_PRO_IMAGE_MODEL}:generateContent?key=gemini-key`,
+    )
+    expect(body.model).toBeUndefined()
+    expect(body.generationConfig.imageConfig).toEqual({
+      imageSize: '4K',
     })
-    expect(body.generation_config).toBeUndefined()
+    expect(body.generationConfig.imageConfig.aspectRatio).toBeUndefined()
+    expect(body.generationConfig.thinkingConfig).toBeUndefined()
+    expect(conversion.fillRect).toHaveBeenCalledWith(0, 0, 2048, 2048)
+    expect(conversion.drawImage).toHaveBeenCalledTimes(1)
+    expect(conversion.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.92)
+    expect(result.images).toEqual(['data:image/jpeg;base64,Y29udmVydGVk'])
+    expect(result.actualParams).toMatchObject({ output_format: 'jpeg' })
   })
 
-  it('uses concurrent Interactions requests for multiple images and keeps partial success', async () => {
+  it('uses concurrent generateContent requests for multiple images and keeps partial success', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
       const callIndex = fetchMock.mock.calls.length
       if (callIndex === 2) throw new TypeError('Failed to fetch')
       return new Response(JSON.stringify({
-        output_image: {
-          type: 'image',
-          data: `aW1hZ2Ut${callIndex}`,
-          mime_type: 'image/png',
-        },
+        candidates: [{
+          content: {
+            parts: [{
+              inlineData: {
+                data: `aW1hZ2Ut${callIndex}`,
+                mimeType: 'image/png',
+              },
+            }],
+          },
+        }],
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -160,6 +218,11 @@ describe('Gemini image API', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(3)
+    for (const call of fetchMock.mock.calls) {
+      const body = JSON.parse(String((call[1] as RequestInit).body))
+      expect(body.generationConfig.imageConfig).toEqual({ imageSize: '1K' })
+      expect(body.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'Minimal' })
+    }
     expect(result.images).toEqual([
       'data:image/png;base64,aW1hZ2Ut1',
       'data:image/png;base64,aW1hZ2Ut3',

@@ -1,11 +1,11 @@
 import type { ApiProfile, TaskParams } from '../types'
+import { convertImageDataUrlFormat } from './canvasImage'
 import { buildApiUrl, readClientDevProxyConfig, shouldUseApiProxy } from './devProxy'
 import {
   type CallApiOptions,
   type CallApiResult,
   fetchImageUrlAsDataUrl,
   getApiErrorMessage,
-  MIME_MAP,
   normalizeBase64Image,
 } from './imageApiShared'
 import { GEMINI_FLASH_IMAGE_MODEL } from './imageModels'
@@ -90,16 +90,16 @@ function extractGeminiImages(payload: unknown) {
   })
 }
 
-function createGeminiInput(prompt: string, inputImageDataUrls: string[]) {
-  if (!inputImageDataUrls.length) return prompt
+function createGeminiParts(prompt: string, inputImageDataUrls: string[]) {
   return [
-    { type: 'text', text: prompt },
+    { text: prompt },
     ...inputImageDataUrls.map((dataUrl) => {
       const image = parseDataUrl(dataUrl)
       return {
-        type: 'image',
-        data: image.data,
-        mime_type: image.mimeType,
+        inlineData: {
+          data: image.data,
+          mimeType: image.mimeType,
+        },
       }
     }),
   ]
@@ -118,26 +118,28 @@ async function callGeminiImageApiSingle(
   profile: ApiProfile,
 ): Promise<CallApiResult> {
   if (opts.maskDataUrl) {
-    throw new Error('Gemini Interactions API 不支持遮罩参数，请移除遮罩后使用参考图编辑')
+    throw new Error('Gemini generateContent API 不支持遮罩参数，请移除遮罩后使用参考图编辑')
   }
 
-  const mime = MIME_MAP[opts.params.output_format] || 'image/png'
-  const responseFormat: Record<string, unknown> = {
-    type: 'image',
-    mime_type: mime,
-    image_size: opts.params.size,
+  const image: Record<string, unknown> = {
+    imageSize: opts.params.size,
   }
-  if (opts.params.aspect_ratio !== 'auto') responseFormat.aspect_ratio = opts.params.aspect_ratio
+  if (opts.params.aspect_ratio !== 'auto') image.aspectRatio = opts.params.aspect_ratio
 
-  const body: Record<string, unknown> = {
-    model: profile.model,
-    input: createGeminiInput(opts.prompt, opts.inputImageDataUrls),
-    response_format: responseFormat,
+  const generationConfig: Record<string, unknown> = {
+    responseModalities: ['IMAGE'],
+    imageConfig: image,
   }
   if (profile.model === GEMINI_FLASH_IMAGE_MODEL) {
-    body.generation_config = {
-      thinking_level: opts.params.thinking_level,
+    generationConfig.thinkingConfig = {
+      thinkingLevel: opts.params.thinking_level === 'high' ? 'High' : 'Minimal',
     }
+  }
+  const body = {
+    contents: [{
+      parts: createGeminiParts(opts.prompt, opts.inputImageDataUrls),
+    }],
+    generationConfig,
   }
 
   const proxyConfig = readClientDevProxyConfig()
@@ -146,11 +148,11 @@ async function callGeminiImageApiSingle(
   const timeoutId = setTimeout(() => controller.abort(), profile.timeout * 1000)
 
   try {
-    const response = await fetch(buildApiUrl(profile.baseUrl, 'interactions', proxyConfig, useApiProxy), {
+    const path = `models/${encodeURIComponent(profile.model)}:generateContent?key=${encodeURIComponent(profile.apiKey)}`
+    const response = await fetch(buildApiUrl(profile.baseUrl, path, proxyConfig, useApiProxy), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': profile.apiKey,
       },
       cache: 'no-store',
       body: JSON.stringify(body),
@@ -167,10 +169,13 @@ async function callGeminiImageApiSingle(
       throw err
     }
 
-    const images = await Promise.all(imageContents.map((image) =>
+    const sourceImages = await Promise.all(imageContents.map((image) =>
       image.data
-        ? normalizeBase64Image(image.data, image.mimeType || mime)
-        : fetchImageUrlAsDataUrl(image.uri!, image.mimeType || mime, controller.signal),
+        ? normalizeBase64Image(image.data, image.mimeType || 'image/png')
+        : fetchImageUrlAsDataUrl(image.uri!, image.mimeType || 'image/png', controller.signal),
+    ))
+    const images = await Promise.all(sourceImages.map((image) =>
+      convertImageDataUrlFormat(image, opts.params.output_format === 'jpeg' ? 'jpeg' : 'png'),
     ))
     const actualParams = getGeminiActualParams(opts.params, images.length)
     return {

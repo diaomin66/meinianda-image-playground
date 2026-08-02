@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { TaskParams } from '../types'
 import { calculateImageSize, normalizeCodexCliImageSize, normalizeImageSize, parseRatio, type SizeTier } from '../lib/size'
 import { usePreventBackgroundScroll } from '../hooks/usePreventBackgroundScroll'
 import ViewportTooltip from './ViewportTooltip'
@@ -20,10 +21,15 @@ const RATIOS = [
 
 interface Props {
   currentSize: string
-  onSelect: (size: string) => void
+  onSelect: (size: string, aspectRatio?: TaskParams['aspect_ratio']) => void
   onClose: () => void
   allowAuto?: boolean
   codexCli?: boolean
+  gemini?: {
+    currentAspectRatio: TaskParams['aspect_ratio']
+    imageSizes: readonly string[]
+    aspectRatios: readonly TaskParams['aspect_ratio'][]
+  }
 }
 
 type Mode = 'auto' | 'ratio' | 'resolution'
@@ -46,7 +52,7 @@ function findPresetForSize(size: string) {
   return null
 }
 
-export default function SizePickerModal({ currentSize, onSelect, onClose, allowAuto = true, codexCli = false }: Props) {
+export default function SizePickerModal({ currentSize, onSelect, onClose, allowAuto = true, codexCli = false, gemini }: Props) {
   usePreventBackgroundScroll(true)
 
   const modalRef = useRef<HTMLDivElement>(null)
@@ -72,17 +78,29 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
     mouseDownTargetRef.current = null
   }
 
-  const currentPreset = findPresetForSize(currentSize)
+  const isGemini = Boolean(gemini)
+  const availableTiers = gemini?.imageSizes ?? TIERS
+  const availableRatios = gemini
+    ? gemini.aspectRatios.map((value) => ({ label: value === 'auto' ? '自动' : value, value }))
+    : RATIOS
+  const currentPreset = isGemini ? null : findPresetForSize(currentSize)
   const currentParsedSize = parseSize(currentSize)
   const [mode, setMode] = useState<Mode>(() => {
+    if (isGemini) return 'ratio'
     if (!currentSize || currentSize === 'auto') return allowAuto ? 'auto' : 'ratio'
     if (currentPreset) return 'ratio'
     return 'resolution'
   })
 
   // Ratio mode state
-  const [tier, setTier] = useState<SizeTier>(currentPreset?.tier ?? '1K')
-  const [ratio, setRatio] = useState(currentPreset?.ratio ?? (allowAuto ? '1:1' : '4:3'))
+  const [tier, setTier] = useState(
+    gemini?.imageSizes.includes(currentSize) ? currentSize : currentPreset?.tier ?? availableTiers[0] ?? '1K',
+  )
+  const [ratio, setRatio] = useState(
+    gemini?.aspectRatios.includes(gemini.currentAspectRatio)
+      ? gemini.currentAspectRatio
+      : currentPreset?.ratio ?? (allowAuto ? '1:1' : '4:3'),
+  )
   const [customRatio, setCustomRatio] = useState('16:9')
 
   // Resolution mode state
@@ -91,7 +109,7 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
 
   const [hintVisible, setHintVisible] = useState(false)
   const hintTimerRef = useRef<number | null>(null)
-  const [tierHint, setTierHint] = useState<SizeTier | null>(null)
+  const [tierHint, setTierHint] = useState<string | null>(null)
   const tierHintTimerRef = useRef<number | null>(null)
 
   useEffect(() => () => {
@@ -112,10 +130,11 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
   )
 
   const previewSize = useMemo(() => {
+    if (isGemini) return tier
     if (mode === 'auto') return 'auto'
     
     if (mode === 'ratio') {
-      const size = calculateImageSize(tier, activeRatio)
+      const size = calculateImageSize(tier as SizeTier, activeRatio)
       return size ? normalizeSize(size) : ''
     }
     
@@ -129,9 +148,10 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
     }
     
     return ''
-  }, [mode, tier, activeRatio, customW, customH, normalizeSize])
+  }, [isGemini, mode, tier, activeRatio, customW, customH, normalizeSize])
 
   const isClamped = useMemo(() => {
+    if (isGemini) return false
     if (!previewSize || previewSize === 'auto') return false
     if (mode === 'ratio' && ratio === 'custom') return customRatioClamped
     if (mode === 'resolution') {
@@ -142,7 +162,7 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
       }
     }
     return false
-  }, [mode, ratio, customRatioClamped, customW, customH, previewSize])
+  }, [isGemini, mode, ratio, customRatioClamped, customW, customH, previewSize])
 
   const showHint = () => setHintVisible(true)
   const hideHint = () => {
@@ -164,7 +184,7 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
 
   const applySize = () => {
     if (!previewSize) return
-    onSelect(previewSize)
+    onSelect(previewSize, isGemini ? ratio as TaskParams['aspect_ratio'] : undefined)
     onClose()
   }
 
@@ -190,7 +210,9 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">设置图像尺寸</h3>
-            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">当前：{currentSize || 'auto'}</p>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              当前：{currentSize || 'auto'}{isGemini ? ` · ${gemini?.currentAspectRatio === 'auto' ? '自动比例' : gemini?.currentAspectRatio}` : ''}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -204,7 +226,8 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
         </div>
 
         <div className="space-y-6">
-          <div className="flex rounded-xl bg-gray-100/80 p-1 dark:bg-white/[0.04]">
+          {!isGemini && (
+            <div className="flex rounded-xl bg-gray-100/80 p-1 dark:bg-white/[0.04]">
             {allowAuto && (
               <button
                 onClick={() => setMode('auto')}
@@ -225,7 +248,8 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
             >
               自定义宽高
             </button>
-          </div>
+            </div>
+          )}
 
           <div className="h-[380px] max-h-[55vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10 pr-1 -mr-1 pb-2">
             {mode === 'auto' && (
@@ -250,8 +274,8 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
               <div className="space-y-5 animate-fade-in">
                 <section>
                   <div className="mb-2 text-xs font-medium text-gray-400 dark:text-gray-500">基准分辨率</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {TIERS.map((item) => {
+                  <div className={availableTiers.length === 4 ? 'grid grid-cols-4 gap-2' : 'grid grid-cols-3 gap-2'}>
+                    {availableTiers.map((item) => {
                       const disabled = codexCli && item !== '1K'
                       return (
                         <div
@@ -302,8 +326,9 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
                 <section>
                   <div className="mb-2 text-xs font-medium text-gray-400 dark:text-gray-500">图像比例</div>
                   <div className="grid grid-cols-4 gap-2">
-                    {RATIOS.map((item) => {
-                      const [w, h] = item.value.split(':').map(Number)
+                    {availableRatios.map((item) => {
+                      const isAutoRatio = item.value === 'auto'
+                      const [w, h] = isAutoRatio ? [1, 1] : item.value.split(':').map(Number)
                       const isHorizontal = w > h
                       const isSquare = w === h
                       return (
@@ -313,25 +338,31 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
                           onClick={() => setRatio(item.value)}
                         >
                           <div className="flex h-5 w-5 items-center justify-center">
-                            <div
-                              className="border-[1.5px] border-current rounded-[3px] opacity-60"
-                              style={{
-                                width: isHorizontal || isSquare ? '100%' : `${(w / h) * 100}%`,
-                                height: !isHorizontal || isSquare ? '100%' : `${(h / w) * 100}%`,
-                              }}
-                            />
+                            {isAutoRatio ? (
+                              <span className="flex h-5 w-5 items-center justify-center rounded-[5px] border border-current text-[10px] font-semibold opacity-70">A</span>
+                            ) : (
+                              <div
+                                className="border-[1.5px] border-current rounded-[3px] opacity-60"
+                                style={{
+                                  width: isHorizontal || isSquare ? '100%' : `${(w / h) * 100}%`,
+                                  height: !isHorizontal || isSquare ? '100%' : `${(h / w) * 100}%`,
+                                }}
+                              />
+                            )}
                           </div>
                           <span className="text-xs">{item.label}</span>
                         </button>
                       )
                     })}
-                    <button className={`${buttonClass(ratio === 'custom')} col-span-4`} onClick={() => setRatio('custom')}>
-                      自定义比例
-                    </button>
+                    {!isGemini && (
+                      <button className={`${buttonClass(ratio === 'custom')} col-span-4`} onClick={() => setRatio('custom')}>
+                        自定义比例
+                      </button>
+                    )}
                   </div>
                 </section>
 
-                {ratio === 'custom' && (
+                {!isGemini && ratio === 'custom' && (
                   <label className="block animate-fade-in">
                     <span className="mb-2 block text-xs font-medium text-gray-400 dark:text-gray-500">输入自定义比例</span>
                     <input
@@ -349,7 +380,7 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
               </div>
             )}
 
-            {mode === 'resolution' && (
+            {!isGemini && mode === 'resolution' && (
               <div className="space-y-5 animate-fade-in">
                 <section>
                   <div className="mb-4 text-xs font-medium text-gray-400 dark:text-gray-500">输入具体像素值</div>
@@ -397,7 +428,11 @@ export default function SizePickerModal({ currentSize, onSelect, onClose, allowA
             <div className="text-xs text-gray-400 dark:text-gray-500">将使用</div>
             <div className="mt-1 flex items-center gap-2">
               <span className="font-mono text-lg font-semibold text-gray-800 dark:text-gray-100">
-                {previewSize || '尺寸无效'}
+                {previewSize
+                  ? isGemini
+                    ? `${previewSize} · ${ratio === 'auto' ? '自动比例' : ratio}`
+                    : previewSize
+                  : '尺寸无效'}
               </span>
               {isClamped && (
                 <div

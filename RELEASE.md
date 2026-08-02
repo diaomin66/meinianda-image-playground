@@ -1,3 +1,10 @@
+## v0.8.1（2026-08-02）
+
+### 修复
+- Gemini 生图改用 `/v1beta/models/{model}:generateContent?key={API_KEY}`，尺寸与比例通过 `generationConfig.imageConfig` 生效。
+- Gemini 尺寸设置复用 GPT 弹出式选择器，并按 Flash/Pro 模型限制可选分辨率和宽高比；PNG/JPEG 输出由应用完成真实像素格式转换。
+- 画廊参数按当前内容精确自适应宽度，完整展示模型与参数值，并在切换 GPT/Gemini 时平滑调整输入栏长度。
+
 ## v0.8.0（2026-08-02）
 
 ### 新功能

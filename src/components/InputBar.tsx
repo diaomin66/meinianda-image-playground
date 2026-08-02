@@ -8,7 +8,17 @@ import { ensureImageCached, getCachedImage } from '../lib/imageCache'
 import { DEFAULT_FAL_IMAGE_SIZE, getChangedParams, getOutputImageLimitForSettings, normalizeParamsForSettings } from '../lib/paramCompatibility'
 import { getAtImageQuery, getImageMentionLabel, getPromptIndexFromVisibleIndex, getPromptMentionParts, getSelectedImageMentionLabel, imageMentionMatches, insertImageMentionAtVisibleRange, insertTextMentionAtVisibleRange, isCursorInSelectedImageMention, stripImageMentionMarkers } from '../lib/promptImageMentions'
 import { normalizeCodexCliImageSize, normalizeImageSize } from '../lib/size'
-import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_MAX_REFERENCE_IMAGES, GPT_IMAGE_MODEL, isGalleryImageModel, type GalleryImageModel } from '../lib/imageModels'
+import {
+  GEMINI_FLASH_ASPECT_RATIOS,
+  GEMINI_FLASH_IMAGE_MODEL,
+  GEMINI_FLASH_IMAGE_SIZES,
+  GEMINI_MAX_REFERENCE_IMAGES,
+  GEMINI_PRO_IMAGE_SIZES,
+  GEMINI_STANDARD_ASPECT_RATIOS,
+  GPT_IMAGE_MODEL,
+  isGalleryImageModel,
+  type GalleryImageModel,
+} from '../lib/imageModels'
 import { FIXED_GEMINI_PROFILE_ID, FIXED_IMAGE_PROFILE_ID } from '../lib/fixedApiProfiles'
 import { createMaskPreviewDataUrl } from '../lib/canvasImage'
 import { getSafeBoundingClientRect } from '../lib/domRect'
@@ -484,7 +494,9 @@ export default function InputBar() {
     : isGeminiProvider
     ? `Gemini 会并发提交，最大数量为 ${outputImageLimit}`
     : `OpenAI 最大请求数量为 ${outputImageLimit}`
-  const displaySize = isFalTextToImage && params.size === 'auto'
+  const displaySize = isGeminiProvider
+    ? `${params.size} · ${params.aspect_ratio === 'auto' ? '自动比例' : params.aspect_ratio}`
+    : isFalTextToImage && params.size === 'auto'
     ? DEFAULT_FAL_IMAGE_SIZE
     : (activeProfile.codexCli ? normalizeCodexCliImageSize(params.size) : normalizeImageSize(params.size)) || DEFAULT_PARAMS.size
 
@@ -1523,11 +1535,9 @@ export default function InputBar() {
     )
   }
 
-  const renderParams = (cols: string) => (
+  const renderParams = (layout: string) => (
     <InputParamsPanel
-      cols={cols === 'grid-cols-6' && appMode === 'gallery'
-        ? isGeminiProvider ? 'grid-cols-6' : 'grid-cols-8'
-        : cols}
+      layout={layout}
       params={params}
       setParams={setParams}
       activeProfile={activeProfile}
@@ -1570,25 +1580,40 @@ export default function InputBar() {
 
   const showFavoriteCollectionBatchBar = inCollectionOverview && selectedFavoriteCollectionIds.length > 0
   const showTaskBatchBar = !showFavoriteCollectionBatchBar && selectedTaskIds.length > 0
+  const inputBarWidthClass = isGeminiProvider
+    ? selectedModel === GEMINI_FLASH_IMAGE_MODEL ? 'max-w-3xl' : 'max-w-2xl'
+    : 'max-w-5xl'
 
   return (
     <>
       <DragUploadOverlay visible={isDragging} atImageLimit={atImageLimit} maxImages={maxReferenceImages} />
 
-      {showSizePicker && !isGeminiProvider && (
+      {showSizePicker && (
         <SizePickerModal
           currentSize={isFalTextToImage && params.size === 'auto' ? DEFAULT_FAL_IMAGE_SIZE : params.size}
-          onSelect={(size) => setParams({ size })}
+          onSelect={(size, aspectRatio) => setParams({
+            size,
+            ...(aspectRatio ? { aspect_ratio: aspectRatio } : {}),
+          })}
           onClose={() => setShowSizePicker(false)}
           allowAuto={!isFalTextToImage}
           codexCli={activeProfile.codexCli}
+          gemini={isGeminiProvider ? {
+            currentAspectRatio: params.aspect_ratio,
+            imageSizes: selectedModel === GEMINI_FLASH_IMAGE_MODEL
+              ? GEMINI_FLASH_IMAGE_SIZES
+              : GEMINI_PRO_IMAGE_SIZES,
+            aspectRatios: selectedModel === GEMINI_FLASH_IMAGE_MODEL
+              ? GEMINI_FLASH_ASPECT_RATIOS
+              : GEMINI_STANDARD_ASPECT_RATIOS,
+          } : undefined}
         />
       )}
 
       <div
         data-input-bar
-        className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-4xl px-3 sm:px-4 transition-all duration-300${promptExpanded ? ' flex flex-col' : ''}`}
-        style={promptExpanded ? { top: `${promptExpandedTop}px`, transitionProperty: 'none' } : undefined}
+        className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 w-full ${inputBarWidthClass} px-3 sm:px-4 transition-[max-width,top,bottom] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]${promptExpanded ? ' flex flex-col' : ''}`}
+        style={promptExpanded ? { top: `${promptExpandedTop}px`, transitionProperty: 'max-width' } : undefined}
       >
         <InputBatchBars
           showFavoriteCollectionBatchBar={showFavoriteCollectionBatchBar}
@@ -1775,8 +1800,8 @@ export default function InputBar() {
           {/* 参数 + 按钮 */}
           <div className="mt-3">
             {/* 桌面端布局 */}
-            <div className="hidden sm:flex items-end justify-between gap-3">
-              {renderParams('grid-cols-6')}
+            <div className="hidden lg:flex items-end justify-between gap-3">
+              {renderParams('flex flex-wrap items-end [&>label]:flex-none')}
 
               <div className="flex gap-2 flex-shrink-0 mb-0.5">
                 <div
@@ -1832,10 +1857,10 @@ export default function InputBar() {
             </div>
 
             {/* 移动端布局 */}
-            <div className="sm:hidden flex flex-col gap-2">
+            <div className="flex flex-col gap-2 lg:hidden">
               <div className={`collapse-section${mobileCollapsed ? ' collapsed' : ''}`}>
                 <div className="collapse-inner">
-                  {renderParams('grid-cols-2')}
+                  {renderParams('grid grid-cols-2')}
                   <div className="h-2" />
                 </div>
               </div>

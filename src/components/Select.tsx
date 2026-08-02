@@ -26,9 +26,10 @@ interface SelectProps {
   className?: string
   onOpenChange?: (isOpen: boolean) => void
   showValueTooltips?: boolean
+  fitContent?: boolean
 }
 
-export default function Select({ value, onChange, onReorder, options, disabled, className, onOpenChange, showValueTooltips = false }: SelectProps) {
+export default function Select({ value, onChange, onReorder, options, disabled, className, onOpenChange, showValueTooltips = false, fitContent = false }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [menuMaxHeight, setMenuMaxHeight] = useState(DEFAULT_DROPDOWN_MAX_HEIGHT)
   const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom')
@@ -179,7 +180,10 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
   }
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div
+      ref={containerRef}
+      className={fitContent ? 'relative max-w-full flex-none' : 'relative w-full'}
+    >
       <div
         ref={triggerRef}
         {...(showValueTooltips ? triggerTooltip.handlers : {})}
@@ -188,11 +192,11 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
           handleToggle(e)
           triggerTooltip.dismiss()
         }}
-        className={`flex items-center justify-between gap-1 w-full cursor-pointer select-none ${className ?? ''} ${
+        className={`flex items-center justify-between gap-1 cursor-pointer select-none ${fitContent ? 'w-max max-w-full' : 'w-full'} ${className ?? ''} ${
           disabled ? '!opacity-50 !cursor-not-allowed !bg-gray-100/50 dark:!bg-white/[0.05]' : ''
         }`}
       >
-        <span className="truncate">{selectedOption?.label ?? value}</span>
+        <span className={fitContent ? 'whitespace-nowrap' : 'truncate'}>{selectedOption?.label ?? value}</span>
         <ChevronDownIcon className={`w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         {showValueTooltips && (
           <ViewportTooltip visible={triggerTooltip.visible} className="max-w-[300px] break-words whitespace-pre-wrap">
@@ -203,7 +207,7 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
 
       {isOpen && (
         <div
-          className={`absolute z-50 w-full overflow-hidden overflow-y-auto rounded-xl border border-gray-200/60 bg-white/95 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95 dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] dark:ring-white/10 custom-scrollbar ${
+          className={`absolute z-50 overflow-hidden overflow-y-auto rounded-xl border border-gray-200/60 bg-white/95 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95 dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] dark:ring-white/10 custom-scrollbar ${fitContent ? 'w-max min-w-full max-w-[min(90vw,24rem)]' : 'w-full'} ${
             placement === 'top' ? 'bottom-full mb-1.5 animate-dropdown-up' : 'top-full mt-1.5 animate-dropdown-down'
           }`}
           style={{ maxHeight: menuMaxHeight }}
@@ -436,7 +440,7 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
                     <DragHandleIcon className="h-3.5 w-3.5" />
                   </div>
                 )}
-                <span className="min-w-0 truncate">{option.label}</span>
+                <span className={fitContent ? 'whitespace-nowrap' : 'min-w-0 truncate'}>{option.label}</span>
               </div>
               {option.actions?.length ? (
                 <span className="ml-auto flex shrink-0 items-center gap-1">

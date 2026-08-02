@@ -1,11 +1,7 @@
 import type { ApiProfile, TaskParams } from '../../types'
 import { dismissAllTooltips } from '../../lib/tooltipDismiss'
 import {
-  GEMINI_FLASH_ASPECT_RATIOS,
   GEMINI_FLASH_IMAGE_MODEL,
-  GEMINI_FLASH_IMAGE_SIZES,
-  GEMINI_PRO_IMAGE_SIZES,
-  GEMINI_STANDARD_ASPECT_RATIOS,
   GALLERY_IMAGE_MODELS,
   type GalleryImageModel,
 } from '../../lib/imageModels'
@@ -21,7 +17,7 @@ interface HintTooltipState {
 }
 
 interface InputParamsPanelProps {
-  cols: string
+  layout: string
   params: TaskParams
   setParams: (patch: Partial<TaskParams>) => void
   activeProfile: ApiProfile
@@ -64,7 +60,7 @@ interface InputParamsPanelProps {
 const MODEL_OPTIONS = GALLERY_IMAGE_MODELS.map((model) => ({ label: model, value: model }))
 
 export default function InputParamsPanel({
-  cols,
+  layout,
   params,
   setParams,
   activeProfile,
@@ -104,25 +100,51 @@ export default function InputParamsPanel({
   onOpenSizePicker,
 }: InputParamsPanelProps) {
   const isGeminiFlash = selectedModel === GEMINI_FLASH_IMAGE_MODEL
-  const geminiAspectRatios = isGeminiFlash ? GEMINI_FLASH_ASPECT_RATIOS : GEMINI_STANDARD_ASPECT_RATIOS
-  const geminiImageSizes = isGeminiFlash ? GEMINI_FLASH_IMAGE_SIZES : GEMINI_PRO_IMAGE_SIZES
 
   const modelControl = showModelSelector ? (
-    <label className="flex min-w-0 flex-col gap-0.5">
+    <label className="col-span-2 flex min-w-0 flex-col gap-0.5">
       <span className="ml-1 text-gray-400 dark:text-gray-500">模型</span>
       <Select
         value={selectedModel}
         onChange={(value) => onModelChange(value as GalleryImageModel)}
         options={MODEL_OPTIONS}
         showValueTooltips
-        className={selectClass}
+        fitContent
+        className={`${selectClass} whitespace-nowrap`}
       />
     </label>
   ) : null
 
+  const sizeControl = (
+    <label
+      className="relative flex w-fit min-w-0 flex-col gap-0.5"
+      onMouseEnter={sizeHint.show}
+      onMouseLeave={sizeHint.hide}
+      onTouchStart={sizeHint.startTouch}
+      onTouchEnd={sizeHint.clearTimer}
+      onTouchCancel={sizeHint.hide}
+      onClick={sizeHint.show}
+    >
+      <span className="ml-1 text-gray-400 dark:text-gray-500">尺寸</span>
+      <button
+        type="button"
+        onClick={() => { dismissAllTooltips(); onOpenSizePicker() }}
+        className="min-w-24 whitespace-nowrap rounded-xl border border-gray-200/60 bg-white/50 px-3 py-1.5 text-left font-mono text-xs shadow-sm transition-all duration-200 hover:bg-white focus:outline-none dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+      >
+        {displaySize}
+      </button>
+      <ButtonTooltip
+        visible={!isGeminiProvider && (isFalTextToImage || activeProfile.codexCli) && sizeHint.visible}
+        text={isFalTextToImage
+          ? <>fal.ai 的文生图模式不支持 <code className="rounded bg-white/10 px-1 py-0.5 font-mono">auto</code> 参数</>
+          : 'Codex CLI 不支持尺寸参数，此处设置仅基于提示词工程'}
+      />
+    </label>
+  )
+
   const quantityControl = (
     <label
-      className="relative flex flex-col gap-0.5"
+      className="relative flex w-fit flex-col gap-0.5"
       onMouseEnter={() => { showAgentNHint(); streamConcurrentHint.show() }}
       onMouseLeave={() => { hideNLimitHint(); streamConcurrentHint.hide() }}
       onTouchStart={() => { startAgentNHintTouch(); streamConcurrentHint.startTouch() }}
@@ -153,7 +175,7 @@ export default function InputParamsPanel({
         type={agentAutoImageCount ? 'text' : 'number'}
         min={agentAutoImageCount ? undefined : 1}
         max={agentAutoImageCount ? undefined : outputImageLimit}
-        className={`rounded-xl border border-gray-200/60 px-3 py-1.5 text-xs shadow-sm outline-none transition-all duration-200 dark:border-white/[0.08] ${
+        className={`min-w-24 rounded-xl border border-gray-200/60 px-3 py-1.5 text-xs shadow-sm outline-none transition-all duration-200 dark:border-white/[0.08] ${
           agentAutoImageCount
             ? 'cursor-not-allowed bg-gray-100/50 opacity-50 dark:bg-white/[0.05]'
             : 'bg-white/50 dark:bg-white/[0.03]'
@@ -169,28 +191,9 @@ export default function InputParamsPanel({
 
   if (isGeminiProvider) {
     return (
-      <div className={`grid ${cols} flex-1 gap-2 text-xs`}>
+      <div className={`${layout} flex-1 gap-2 text-xs`}>
         {modelControl}
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className="ml-1 text-gray-400 dark:text-gray-500">宽高比</span>
-          <Select
-            value={params.aspect_ratio}
-            onChange={(value) => setParams({ aspect_ratio: value as TaskParams['aspect_ratio'] })}
-            options={geminiAspectRatios.map((value) => ({ label: value, value }))}
-            showValueTooltips={false}
-            className={selectClass}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className="ml-1 text-gray-400 dark:text-gray-500">分辨率</span>
-          <Select
-            value={params.size}
-            onChange={(value) => setParams({ size: value })}
-            options={geminiImageSizes.map((value) => ({ label: value, value }))}
-            showValueTooltips={false}
-            className={selectClass}
-          />
-        </label>
+        {sizeControl}
         <label className="flex min-w-0 flex-col gap-0.5">
           <span className="ml-1 text-gray-400 dark:text-gray-500">格式</span>
           <Select
@@ -206,6 +209,7 @@ export default function InputParamsPanel({
               { label: 'JPEG', value: 'jpeg' },
             ]}
             showValueTooltips={false}
+            fitContent
             className={selectClass}
           />
         </label>
@@ -220,6 +224,7 @@ export default function InputParamsPanel({
                 { label: 'high', value: 'high' },
               ]}
               showValueTooltips={false}
+              fitContent
               className={selectClass}
             />
           </label>
@@ -230,32 +235,9 @@ export default function InputParamsPanel({
   }
 
   return (
-    <div className={`grid ${cols} flex-1 gap-2 text-xs`}>
+    <div className={`${layout} flex-1 gap-2 text-xs`}>
       {modelControl}
-      <label
-        className="relative flex flex-col gap-0.5"
-        onMouseEnter={sizeHint.show}
-        onMouseLeave={sizeHint.hide}
-        onTouchStart={sizeHint.startTouch}
-        onTouchEnd={sizeHint.clearTimer}
-        onTouchCancel={sizeHint.hide}
-        onClick={sizeHint.show}
-      >
-        <span className="ml-1 text-gray-400 dark:text-gray-500">尺寸</span>
-        <button
-          type="button"
-          onClick={() => { dismissAllTooltips(); onOpenSizePicker() }}
-          className="rounded-xl border border-gray-200/60 bg-white/50 px-3 py-1.5 text-left font-mono text-xs shadow-sm transition-all duration-200 hover:bg-white focus:outline-none dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-        >
-          {displaySize}
-        </button>
-        <ButtonTooltip
-          visible={(isFalTextToImage || activeProfile.codexCli) && sizeHint.visible}
-          text={isFalTextToImage
-            ? <>fal.ai 的文生图模式不支持 <code className="rounded bg-white/10 px-1 py-0.5 font-mono">auto</code> 参数</>
-            : 'Codex CLI 不支持尺寸参数，此处设置仅基于提示词工程'}
-        />
-      </label>
+      {sizeControl}
       <label
         className="relative flex flex-col gap-0.5"
         onMouseEnter={qualityHint.show}
@@ -274,6 +256,7 @@ export default function InputParamsPanel({
           options={qualityOptions}
           disabled={activeProfile.codexCli}
           showValueTooltips={false}
+          fitContent
           className={activeProfile.codexCli
             ? 'cursor-not-allowed rounded-xl border border-gray-200/60 bg-gray-100/50 px-3 py-1.5 text-xs opacity-50 shadow-sm transition-all duration-200 dark:border-white/[0.08] dark:bg-white/[0.05]'
             : selectClass}
@@ -298,6 +281,7 @@ export default function InputParamsPanel({
             { label: 'WebP', value: 'webp' },
           ]}
           showValueTooltips={false}
+          fitContent
           className={selectClass}
         />
       </label>
@@ -315,6 +299,7 @@ export default function InputParamsPanel({
           ]}
           disabled={params.output_format === 'jpeg'}
           showValueTooltips={false}
+          fitContent
           className={params.output_format === 'jpeg'
             ? 'cursor-not-allowed rounded-xl border border-gray-200/60 bg-gray-100/50 px-3 py-1.5 text-xs opacity-50 shadow-sm transition-all duration-200 dark:border-white/[0.08] dark:bg-white/[0.05]'
             : selectClass}
@@ -339,7 +324,7 @@ export default function InputParamsPanel({
           min={0}
           max={100}
           placeholder="0-100"
-          className={`rounded-xl border border-gray-200/60 px-3 py-1.5 text-xs shadow-sm outline-none transition-all duration-200 dark:border-white/[0.08] ${
+          className={`min-w-24 rounded-xl border border-gray-200/60 px-3 py-1.5 text-xs shadow-sm outline-none transition-all duration-200 dark:border-white/[0.08] ${
             compressionDisabled
               ? 'cursor-not-allowed bg-gray-100/50 opacity-50 dark:bg-white/[0.05]'
               : 'bg-white/50 dark:bg-white/[0.03]'
@@ -371,6 +356,7 @@ export default function InputParamsPanel({
           ]}
           disabled={moderationDisabled}
           showValueTooltips={false}
+          fitContent
           className={moderationDisabled
             ? 'cursor-not-allowed rounded-xl border border-gray-200/60 bg-gray-100/50 px-3 py-1.5 text-xs opacity-50 shadow-sm transition-all duration-200 dark:border-white/[0.08] dark:bg-white/[0.05]'
             : selectClass}

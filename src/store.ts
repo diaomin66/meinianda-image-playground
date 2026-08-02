@@ -1627,7 +1627,7 @@ export async function submitTask(options: { allowFullMask?: boolean; useCurrentA
   }
 
   if (activeProfile.provider === 'gemini' && maskDraft) {
-    showToast('Gemini Interactions API 不支持遮罩参数，请移除遮罩后使用参考图编辑', 'error')
+    showToast('Gemini generateContent API 不支持遮罩参数，请移除遮罩后使用参考图编辑', 'error')
     return
   }
 

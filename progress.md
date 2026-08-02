@@ -97,3 +97,42 @@
 - 回滚代码：执行 `git revert d8f8942` 后推送 `main`。
 - 回滚仓库名称：执行 `gh repo rename gpt-image-playground-fixed --repo diaomin66/meinianda-image-playground --yes`。
 - 停止本地服务：执行 `Stop-Process -Id 66448`。
+
+## 2026-08-02 - Task: 修复 Gemini generateContent 参数与画廊自适应布局
+
+### What was done
+
+- 将 Gemini 生图请求从错误的 `/v1beta/interactions` 改为 `/v1beta/models/{model}:generateContent?key={API_KEY}`，并切换为 `contents`、`generationConfig`、`inlineData` 请求与响应结构。
+- 将 Gemini 分辨率和宽高比放入服务实际读取的 `generationConfig.imageConfig`；Flash 思考级别使用 `thinkingConfig`，多图数量继续通过并发独立请求实现。
+- Gemini 尺寸设置复用 GPT 尺寸弹窗，Flash 与 Pro 分别只展示自身支持的分辨率和宽高比；服务返回图片后按用户选择完成真实 PNG/JPEG 像素格式转换。
+- 模型和全部参数控件改为按当前真实内容自动宽缩，下拉菜单独立容纳完整候选项；输入栏会按 GPT、Gemini Flash、Gemini Pro 的参数数量平滑拉长或缩短。
+- 版本升级到 `0.8.1`，同步固定配置、发布说明和设置页接口描述。
+
+### Testing
+
+- `npm test`：32 个测试文件、407 项测试全部通过。
+- `npm run build`：TypeScript 与 Vite 生产构建通过。
+- `npm test -- --run src/lib/geminiImageApi.test.ts`：Gemini 路径、尺寸、比例、Flash 思考级别、Pro 参数、PNG/JPEG 真实转换和并发数量测试通过。
+- 本地生产预览：`http://127.0.0.1:4173/` 返回 HTTP 200，页面标题为 `Meinianda Image Playground`，监听进程 PID 为 `66448`。
+- Edge Headless 在 1265px 与 1024px 视口完成截图检查，GPT 参数值均完整显示且无省略号。
+- 未读取浏览器中已有的 API Key，因此未对真实 Gemini 服务发起计费请求；请求 URL、请求体、输出格式转换和响应解析由自动化测试覆盖。
+
+### Notes
+
+- `README.md`：更新 Gemini generateContent 接口和参数栏自适应行为说明。
+- `RELEASE.md`：新增 v0.8.1 修复说明。
+- `docs/fixed-configuration.md`：更新固定 Gemini 路径、参数生效位置、格式转换和自适应布局说明。
+- `package.json`：版本升级到 0.8.1。
+- `package-lock.json`：同步根包版本到 0.8.1。
+- `src/components/InputBar.tsx`：接入 Gemini 尺寸弹窗、内容驱动参数布局和模型级输入栏宽度动画。
+- `src/components/Select.tsx`：新增按当前内容精确宽缩、候选菜单独立展开的选择器模式。
+- `src/components/SizePickerModal.tsx`：扩展现有尺寸弹窗以支持 Gemini 模型专属尺寸和宽高比。
+- `src/components/input/inputParamsPanel.tsx`：合并 Gemini 尺寸入口并让全部参数控件保持完整内容宽度。
+- `src/components/settings/FixedApiSettingsTab.tsx`：更新 Gemini 固定接口展示。
+- `src/lib/canvasImage.ts`：新增 PNG/JPEG 真实像素格式转换。
+- `src/lib/devProxy.test.ts`：验证 v1beta generateContent 路径和查询参数拼接。
+- `src/lib/geminiImageApi.test.ts`：覆盖 Flash、Pro、尺寸、比例、格式、思考级别和并发请求。
+- `src/lib/geminiImageApi.ts`：实现 generateContent URL、`imageConfig`、参考图、响应解析和输出格式转换。
+- `src/store.ts`：更新 Gemini 遮罩限制提示。
+- `progress.md`：追加本轮实现、验证和回滚记录。
+- 回滚：推送后执行 `git revert <本次提交哈希>` 并推送 `main`。

@@ -5,10 +5,11 @@
 ## 固定 API 配置
 
 - 生图配置：固定服务地址 `https://meinianda.top/v1`，固定使用 `Images API (/v1/images)` 和 `gpt-image-2`。
-- Gemini 生图配置：固定服务地址 `https://meinianda.top/v1beta`，固定使用 `Interactions API (/v1beta/interactions)`；画廊可选 `gemini-3.1-flash-image` 和 `gemini-3-pro-image`。
+- Gemini 生图配置：固定服务地址 `https://meinianda.top/v1beta`，固定使用 `generateContent API (/v1beta/models/{model}:generateContent)`；画廊可选 `gemini-3.1-flash-image` 和 `gemini-3-pro-image`。
 - 语言配置：固定服务地址 `https://meinianda.top/v1`，固定使用 `Responses API (/v1/responses)` 和 `gpt-5.6-sol`。
 - 三项配置仅允许填写各自的 API Key；地址、服务商和接口类型不可修改。
 - 画廊根据模型选择自动切换 GPT/Gemini 生图配置；Agent 继续使用语言配置处理对话，并使用 GPT 生图配置创建图片。
+- 参数控件按当前值自动调整宽度；输入栏会根据 GPT、Gemini Flash 和 Gemini Pro 的参数数量平滑拉长或缩短。
 
 ## Vercel 一键部署
 

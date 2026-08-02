@@ -38,8 +38,8 @@ describe('buildApiUrl', () => {
   })
 
   it('preserves Gemini v1beta base URLs', () => {
-    expect(buildApiUrl('https://api.example.com/v1beta', 'interactions', null, false)).toBe(
-      'https://api.example.com/v1beta/interactions',
+    expect(buildApiUrl('https://api.example.com/v1beta', 'models/gemini-image:generateContent?key=test', null, false)).toBe(
+      'https://api.example.com/v1beta/models/gemini-image:generateContent?key=test',
     )
   })
 })

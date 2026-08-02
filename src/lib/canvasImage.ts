@@ -26,6 +26,32 @@ export async function imageDataUrlToPngBlob(dataUrl: string): Promise<Blob> {
   return canvasToBlob(canvas, 'image/png')
 }
 
+export async function convertImageDataUrlFormat(dataUrl: string, outputFormat: 'png' | 'jpeg'): Promise<string> {
+  const targetMime = outputFormat === 'jpeg' ? 'image/jpeg' : 'image/png'
+  if (dataUrl.startsWith(`data:${targetMime};`)) return dataUrl
+
+  const image = await loadImage(dataUrl)
+  const canvas = document.createElement('canvas')
+  canvas.width = image.naturalWidth
+  canvas.height = image.naturalHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('当前浏览器不支持 Canvas，无法转换 Gemini 图片格式')
+
+  if (outputFormat === 'jpeg') {
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+  ctx.drawImage(image, 0, 0)
+
+  const converted = outputFormat === 'jpeg'
+    ? canvas.toDataURL(targetMime, 0.92)
+    : canvas.toDataURL(targetMime)
+  if (!converted.startsWith(`data:${targetMime};`)) {
+    throw new Error(`浏览器未能将 Gemini 图片转换为 ${outputFormat.toUpperCase()}`)
+  }
+  return converted
+}
+
 export async function maskDataUrlToPngBlob(maskDataUrl: string): Promise<Blob> {
   const blob = await dataUrlToBlob(maskDataUrl, 'image/png')
   if (blob.type !== 'image/png') {
