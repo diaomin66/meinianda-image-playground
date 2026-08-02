@@ -1,13 +1,24 @@
 import { DEFAULT_PARAMS, type AppSettings, type TaskParams } from '../types'
 import { getActiveApiProfile } from './apiProfiles'
+import {
+  GEMINI_FLASH_ASPECT_RATIOS,
+  GEMINI_FLASH_IMAGE_MODEL,
+  GEMINI_FLASH_IMAGE_SIZES,
+  GEMINI_PRO_IMAGE_SIZES,
+  GEMINI_STANDARD_ASPECT_RATIOS,
+} from './imageModels'
 import { normalizeCodexCliImageSize, normalizeImageSize } from './size'
 
 export const DEFAULT_FAL_IMAGE_SIZE = '1360x1024'
 export const MAX_FAL_OUTPUT_IMAGES = 4
 export const MAX_OPENAI_OUTPUT_IMAGES = 10
+export const MAX_GEMINI_OUTPUT_IMAGES = 10
 
 export function getOutputImageLimitForSettings(settings: AppSettings) {
-  return getActiveApiProfile(settings).provider === 'fal' ? MAX_FAL_OUTPUT_IMAGES : MAX_OPENAI_OUTPUT_IMAGES
+  const provider = getActiveApiProfile(settings).provider
+  if (provider === 'fal') return MAX_FAL_OUTPUT_IMAGES
+  if (provider === 'gemini') return MAX_GEMINI_OUTPUT_IMAGES
+  return MAX_OPENAI_OUTPUT_IMAGES
 }
 
 export function normalizeParamsForSettings(
@@ -35,8 +46,26 @@ export function normalizeParamsForSettings(
     nextParams.output_compression = DEFAULT_PARAMS.output_compression
   }
 
+  if (activeProfile.provider === 'gemini') {
+    const isFlash = activeProfile.model === GEMINI_FLASH_IMAGE_MODEL
+    const imageSizes = isFlash ? GEMINI_FLASH_IMAGE_SIZES : GEMINI_PRO_IMAGE_SIZES
+    const aspectRatios = isFlash ? GEMINI_FLASH_ASPECT_RATIOS : GEMINI_STANDARD_ASPECT_RATIOS
+    if (!imageSizes.some((size) => size === nextParams.size)) nextParams.size = '1K'
+    if (!aspectRatios.some((ratio) => ratio === nextParams.aspect_ratio)) nextParams.aspect_ratio = 'auto'
+    if (nextParams.output_format === 'webp') nextParams.output_format = 'png'
+    nextParams.quality = DEFAULT_PARAMS.quality
+    nextParams.background = DEFAULT_PARAMS.background
+    nextParams.moderation = DEFAULT_PARAMS.moderation
+    nextParams.output_compression = DEFAULT_PARAMS.output_compression
+    nextParams.transparent_output = false
+  }
+
   if (nextParams.output_format === 'png') {
     nextParams.output_compression = DEFAULT_PARAMS.output_compression
+  }
+
+  if (nextParams.output_format === 'jpeg') {
+    nextParams.background = 'opaque'
   }
 
   return nextParams

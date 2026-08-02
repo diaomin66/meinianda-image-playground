@@ -34,3 +34,43 @@
 - `src/hooks/useVersionCheck.ts`：删除不再使用的版本跳转检查。
 - `vercel.json`：启用 Vite 静态构建部署配置。
 - 回滚：推送后执行 `git revert <本次提交哈希>`。
+
+## 2026-08-02 - Task: 增加 Gemini 生图并更名为 Meinianda Image Playground
+
+### What was done
+
+- 新增固定 Gemini 生图配置，使用 `https://meinianda.top/v1beta/interactions`，支持 `gemini-3.1-flash-image` 与 `gemini-3-pro-image`，仅开放独立 API Key。
+- 画廊新增三模型选择并自动路由 GPT/Gemini 配置；GPT 与两种 Gemini 模型分别展示和发送官方支持的参数。
+- Gemini 参考图输入、输出解析、多图并发与部分成功处理已接入；遮罩参数在提交前明确拦截。
+- 项目品牌、PWA、部署配置、发布工作流、Docker 镜像名和 GitHub/Vercel 部署入口统一更名。
+
+### Testing
+
+- `npm run build`：通过。
+- `npm test -- --run src/lib/geminiImageApi.test.ts src/lib/fixedApiProfiles.test.ts src/lib/apiProfiles.test.ts src/lib/devProxy.test.ts src/store.test.ts`：5 个测试文件、155 项测试通过。
+- Gemini 请求验证：确认使用 `/v1beta/interactions`、`x-goog-api-key`、模型专属分辨率/宽高比/思考级别及并发数量处理。
+- 静态扫描：源码未新增可跳转锚点或 `href=`；未残留 Gemini preview 模型名或错误的 `/v1beta/v1` 路径。
+
+### Notes
+
+- `.github/workflows/docker.yml`：Docker 镜像名改为 Meinianda Image Playground。
+- `.github/workflows/vercel-tag-deploy.yml`：移除原上游 Release 门槛，版本变化即可触发部署钩子。
+- `AGENTS.md`：更新项目名称。
+- `README.md`：更新固定配置、三模型、Vercel 与本地部署说明。
+- `RELEASE.md`：新增 `v0.8.0` 发布说明。
+- `docs/fixed-configuration.md`：记录 Gemini 固定配置、模型参数差异和遮罩限制。
+- `index.html`：更新页面与 PWA 标题。
+- `package.json`、`package-lock.json`：包名改为 `meinianda-image-playground`，版本升级到 `0.8.0`。
+- `public/manifest.webmanifest`、`public/pwa-icon.svg`、`public/sw.js`：更新 PWA 品牌、图标与缓存版本。
+- `scripts/mock-image-api.mjs`、`wrangler.jsonc`：更新本地模拟服务和 Cloudflare 项目名。
+- `src/components/DetailModal.tsx`、`src/components/TaskCard.tsx`：按供应商展示任务模型与参数。
+- `src/components/Header.tsx`、`src/components/HelpModal.tsx`：更新可见品牌名称。
+- `src/components/InputBar.tsx`、`src/components/input/inputParamsPanel.tsx`：新增模型选择与 GPT/Gemini 差异化参数面板。
+- `src/components/settings/FixedApiSettingsTab.tsx`：新增 Gemini API Key 固定配置卡片。
+- `src/lib/api.ts`、`src/lib/geminiImageApi.ts`：新增 Gemini 请求路由、请求构造、响应解析与并发处理。
+- `src/lib/apiProfiles.ts`、`src/lib/fixedApiProfiles.ts`、`src/lib/imageModels.ts`：新增 Gemini 服务商、固定配置和模型能力常量。
+- `src/lib/devProxy.ts`：支持保留 `v1beta` API 版本路径。
+- `src/lib/imageApiShared.ts`、`src/lib/openaiCompatibleImageApi.ts`：接入 GPT Image 2 原生背景参数。
+- `src/lib/paramCompatibility.ts`、`src/lib/persistedState.ts`、`src/store.ts`、`src/types.ts`：新增模型参数、持久化兼容、任务路由与输入限制。
+- `src/lib/apiProfiles.test.ts`、`src/lib/devProxy.test.ts`、`src/lib/fixedApiProfiles.test.ts`、`src/lib/geminiImageApi.test.ts`、`src/store.test.ts`：覆盖新配置、路径、请求与迁移行为。
+- 回滚：推送后执行 `git revert <本次提交哈希>`；GitHub 仓库重命名可用 `gh repo rename gpt-image-playground-fixed --repo diaomin66/meinianda-image-playground --yes` 回滚名称。

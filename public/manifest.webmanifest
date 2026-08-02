@@ -1,7 +1,7 @@
 {
-  "name": "GPT Image Playground",
-  "short_name": "GPT Image",
-  "description": "GPT Image Playground 图像生成工作台",
+  "name": "Meinianda Image Playground",
+  "short_name": "Meinianda Image",
+  "description": "Meinianda Image Playground 多模型图像生成工作台",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

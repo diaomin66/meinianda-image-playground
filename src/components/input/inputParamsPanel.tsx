@@ -1,5 +1,14 @@
 import type { ApiProfile, TaskParams } from '../../types'
 import { dismissAllTooltips } from '../../lib/tooltipDismiss'
+import {
+  GEMINI_FLASH_ASPECT_RATIOS,
+  GEMINI_FLASH_IMAGE_MODEL,
+  GEMINI_FLASH_IMAGE_SIZES,
+  GEMINI_PRO_IMAGE_SIZES,
+  GEMINI_STANDARD_ASPECT_RATIOS,
+  GALLERY_IMAGE_MODELS,
+  type GalleryImageModel,
+} from '../../lib/imageModels'
 import Select from '../Select'
 import ButtonTooltip from './buttonTooltip'
 
@@ -11,61 +20,20 @@ interface HintTooltipState {
   startTouch: () => void
 }
 
-export default function InputParamsPanel({
-  cols,
-  params,
-  setParams,
-  activeProfile,
-  isFalProvider,
-  isFalTextToImage,
-  displaySize,
-  qualityOptions,
-  selectClass,
-  transparentOutputAvailable,
-  showTransparentOutputControl,
-  transparentOutputEnabled,
-  transparentOutputHint,
-  onTransparentOutputMenuOpenChange,
-  compressionHint,
-  compressionDisabled,
-  outputCompressionInput,
-  setOutputCompressionInput,
-  commitOutputCompression,
-  moderationHint,
-  moderationDisabled,
-  agentAutoImageCount,
-  outputImageLimit,
-  nInput,
-  setNInputFocused,
-  commitN,
-  handleNInputChange,
-  handleNLimitIncreaseAttempt,
-  showAgentNHint,
-  hideNLimitHint,
-  startAgentNHintTouch,
-  clearAgentNHintTouchTimer,
-  nLimitHint,
-  nLimitHintText,
-  streamConcurrentByN,
-  streamConcurrentHint,
-  sizeHint,
-  qualityHint,
-  onOpenSizePicker,
-}: {
+interface InputParamsPanelProps {
   cols: string
   params: TaskParams
   setParams: (patch: Partial<TaskParams>) => void
   activeProfile: ApiProfile
+  showModelSelector: boolean
+  selectedModel: GalleryImageModel
+  onModelChange: (model: GalleryImageModel) => void
+  isGeminiProvider: boolean
   isFalProvider: boolean
   isFalTextToImage: boolean
   displaySize: string
   qualityOptions: Array<{ label: string; value: string }>
   selectClass: string
-  transparentOutputAvailable: boolean
-  showTransparentOutputControl: boolean
-  transparentOutputEnabled: boolean
-  transparentOutputHint: HintTooltipState
-  onTransparentOutputMenuOpenChange: (open: boolean) => void
   compressionHint: HintTooltipState
   compressionDisabled: boolean
   outputCompressionInput: string
@@ -91,9 +59,179 @@ export default function InputParamsPanel({
   sizeHint: HintTooltipState
   qualityHint: HintTooltipState
   onOpenSizePicker: () => void
-}) {
+}
+
+const MODEL_OPTIONS = GALLERY_IMAGE_MODELS.map((model) => ({ label: model, value: model }))
+
+export default function InputParamsPanel({
+  cols,
+  params,
+  setParams,
+  activeProfile,
+  showModelSelector,
+  selectedModel,
+  onModelChange,
+  isGeminiProvider,
+  isFalProvider,
+  isFalTextToImage,
+  displaySize,
+  qualityOptions,
+  selectClass,
+  compressionHint,
+  compressionDisabled,
+  outputCompressionInput,
+  setOutputCompressionInput,
+  commitOutputCompression,
+  moderationHint,
+  moderationDisabled,
+  agentAutoImageCount,
+  outputImageLimit,
+  nInput,
+  setNInputFocused,
+  commitN,
+  handleNInputChange,
+  handleNLimitIncreaseAttempt,
+  showAgentNHint,
+  hideNLimitHint,
+  startAgentNHintTouch,
+  clearAgentNHintTouchTimer,
+  nLimitHint,
+  nLimitHintText,
+  streamConcurrentByN,
+  streamConcurrentHint,
+  sizeHint,
+  qualityHint,
+  onOpenSizePicker,
+}: InputParamsPanelProps) {
+  const isGeminiFlash = selectedModel === GEMINI_FLASH_IMAGE_MODEL
+  const geminiAspectRatios = isGeminiFlash ? GEMINI_FLASH_ASPECT_RATIOS : GEMINI_STANDARD_ASPECT_RATIOS
+  const geminiImageSizes = isGeminiFlash ? GEMINI_FLASH_IMAGE_SIZES : GEMINI_PRO_IMAGE_SIZES
+
+  const modelControl = showModelSelector ? (
+    <label className="flex min-w-0 flex-col gap-0.5">
+      <span className="ml-1 text-gray-400 dark:text-gray-500">模型</span>
+      <Select
+        value={selectedModel}
+        onChange={(value) => onModelChange(value as GalleryImageModel)}
+        options={MODEL_OPTIONS}
+        showValueTooltips
+        className={selectClass}
+      />
+    </label>
+  ) : null
+
+  const quantityControl = (
+    <label
+      className="relative flex flex-col gap-0.5"
+      onMouseEnter={() => { showAgentNHint(); streamConcurrentHint.show() }}
+      onMouseLeave={() => { hideNLimitHint(); streamConcurrentHint.hide() }}
+      onTouchStart={() => { startAgentNHintTouch(); streamConcurrentHint.startTouch() }}
+      onTouchEnd={() => { clearAgentNHintTouchTimer(); streamConcurrentHint.clearTimer() }}
+      onTouchCancel={() => {
+        clearAgentNHintTouchTimer()
+        hideNLimitHint()
+        streamConcurrentHint.hide()
+      }}
+      onClick={() => { showAgentNHint(); streamConcurrentHint.show() }}
+    >
+      <span className="ml-1 text-gray-400 dark:text-gray-500">数量</span>
+      <input
+        value={nInput}
+        onChange={(event) => handleNInputChange(event.target.value)}
+        onFocus={() => setNInputFocused(true)}
+        onBlur={() => {
+          setNInputFocused(false)
+          commitN()
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowUp') handleNLimitIncreaseAttempt(() => event.preventDefault())
+        }}
+        onWheel={(event) => {
+          if (event.deltaY < 0) handleNLimitIncreaseAttempt(() => event.preventDefault())
+        }}
+        disabled={agentAutoImageCount}
+        type={agentAutoImageCount ? 'text' : 'number'}
+        min={agentAutoImageCount ? undefined : 1}
+        max={agentAutoImageCount ? undefined : outputImageLimit}
+        className={`rounded-xl border border-gray-200/60 px-3 py-1.5 text-xs shadow-sm outline-none transition-all duration-200 dark:border-white/[0.08] ${
+          agentAutoImageCount
+            ? 'cursor-not-allowed bg-gray-100/50 opacity-50 dark:bg-white/[0.05]'
+            : 'bg-white/50 dark:bg-white/[0.03]'
+        }`}
+      />
+      <ButtonTooltip visible={nLimitHint.visible} text={nLimitHintText} />
+      <ButtonTooltip
+        visible={streamConcurrentByN && streamConcurrentHint.visible && !nLimitHint.visible}
+        text={isGeminiProvider ? 'Gemini 数量大于 1 时会并发提交多个独立请求' : '数量大于 1 时会将多图生成拆分为并发单图'}
+      />
+    </label>
+  )
+
+  if (isGeminiProvider) {
+    return (
+      <div className={`grid ${cols} flex-1 gap-2 text-xs`}>
+        {modelControl}
+        <label className="flex min-w-0 flex-col gap-0.5">
+          <span className="ml-1 text-gray-400 dark:text-gray-500">宽高比</span>
+          <Select
+            value={params.aspect_ratio}
+            onChange={(value) => setParams({ aspect_ratio: value as TaskParams['aspect_ratio'] })}
+            options={geminiAspectRatios.map((value) => ({ label: value, value }))}
+            showValueTooltips={false}
+            className={selectClass}
+          />
+        </label>
+        <label className="flex min-w-0 flex-col gap-0.5">
+          <span className="ml-1 text-gray-400 dark:text-gray-500">分辨率</span>
+          <Select
+            value={params.size}
+            onChange={(value) => setParams({ size: value })}
+            options={geminiImageSizes.map((value) => ({ label: value, value }))}
+            showValueTooltips={false}
+            className={selectClass}
+          />
+        </label>
+        <label className="flex min-w-0 flex-col gap-0.5">
+          <span className="ml-1 text-gray-400 dark:text-gray-500">格式</span>
+          <Select
+            value={params.output_format}
+            onChange={(value) => setParams({
+              output_format: value as TaskParams['output_format'],
+              output_compression: null,
+              background: 'auto',
+              transparent_output: false,
+            })}
+            options={[
+              { label: 'PNG', value: 'png' },
+              { label: 'JPEG', value: 'jpeg' },
+            ]}
+            showValueTooltips={false}
+            className={selectClass}
+          />
+        </label>
+        {isGeminiFlash && (
+          <label className="flex min-w-0 flex-col gap-0.5">
+            <span className="ml-1 text-gray-400 dark:text-gray-500">思考</span>
+            <Select
+              value={params.thinking_level}
+              onChange={(value) => setParams({ thinking_level: value as TaskParams['thinking_level'] })}
+              options={[
+                { label: 'minimal', value: 'minimal' },
+                { label: 'high', value: 'high' },
+              ]}
+              showValueTooltips={false}
+              className={selectClass}
+            />
+          </label>
+        )}
+        {quantityControl}
+      </div>
+    )
+  }
+
   return (
-    <div className={`grid ${cols} gap-2 text-xs flex-1`}>
+    <div className={`grid ${cols} flex-1 gap-2 text-xs`}>
+      {modelControl}
       <label
         className="relative flex flex-col gap-0.5"
         onMouseEnter={sizeHint.show}
@@ -103,11 +241,11 @@ export default function InputParamsPanel({
         onTouchCancel={sizeHint.hide}
         onClick={sizeHint.show}
       >
-        <span className="text-gray-400 dark:text-gray-500 ml-1">尺寸</span>
+        <span className="ml-1 text-gray-400 dark:text-gray-500">尺寸</span>
         <button
           type="button"
           onClick={() => { dismissAllTooltips(); onOpenSizePicker() }}
-          className="px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-white/[0.08] bg-white/50 dark:bg-white/[0.03] hover:bg-white dark:hover:bg-white/[0.06] focus:outline-none text-xs text-left transition-all duration-200 shadow-sm font-mono"
+          className="rounded-xl border border-gray-200/60 bg-white/50 px-3 py-1.5 text-left font-mono text-xs shadow-sm transition-all duration-200 hover:bg-white focus:outline-none dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
         >
           {displaySize}
         </button>
@@ -127,17 +265,17 @@ export default function InputParamsPanel({
         onTouchCancel={qualityHint.hide}
         onClick={qualityHint.show}
       >
-        <span className="text-gray-400 dark:text-gray-500 ml-1">质量</span>
+        <span className="ml-1 text-gray-400 dark:text-gray-500">质量</span>
         <Select
           value={activeProfile.codexCli ? 'auto' : isFalProvider && params.quality === 'auto' ? 'high' : params.quality}
-          onChange={(val) => {
-            if (!activeProfile.codexCli) setParams({ quality: val as TaskParams['quality'] })
+          onChange={(value) => {
+            if (!activeProfile.codexCli) setParams({ quality: value as TaskParams['quality'] })
           }}
           options={qualityOptions}
           disabled={activeProfile.codexCli}
           showValueTooltips={false}
           className={activeProfile.codexCli
-            ? 'px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-white/[0.08] bg-gray-100/50 dark:bg-white/[0.05] opacity-50 cursor-not-allowed text-xs transition-all duration-200 shadow-sm'
+            ? 'cursor-not-allowed rounded-xl border border-gray-200/60 bg-gray-100/50 px-3 py-1.5 text-xs opacity-50 shadow-sm transition-all duration-200 dark:border-white/[0.08] dark:bg-white/[0.05]'
             : selectClass}
         />
         <ButtonTooltip
@@ -146,15 +284,14 @@ export default function InputParamsPanel({
         />
       </label>
       <label className="flex flex-col gap-0.5">
-        <span className="text-gray-400 dark:text-gray-500 ml-1">格式</span>
+        <span className="ml-1 text-gray-400 dark:text-gray-500">格式</span>
         <Select
           value={params.output_format}
-          onChange={(val) => {
-            setParams({
-              output_format: val as TaskParams['output_format'],
-              ...(val === 'png' ? { output_compression: null } : { transparent_output: false }),
-            })
-          }}
+          onChange={(value) => setParams({
+            output_format: value as TaskParams['output_format'],
+            ...(value === 'png' ? { output_compression: null } : {}),
+            ...(value === 'jpeg' ? { background: 'opaque' as const, transparent_output: false } : {}),
+          })}
           options={[
             { label: 'PNG', value: 'png' },
             { label: 'JPEG', value: 'jpeg' },
@@ -164,68 +301,55 @@ export default function InputParamsPanel({
           className={selectClass}
         />
       </label>
-      {showTransparentOutputControl ? (
-        <label
-          className="relative flex flex-col gap-0.5"
-          onMouseEnter={transparentOutputHint.show}
-          onMouseLeave={transparentOutputHint.hide}
-          onTouchStart={transparentOutputHint.startTouch}
-          onTouchEnd={transparentOutputHint.clearTimer}
-          onTouchCancel={transparentOutputHint.hide}
-          onClick={transparentOutputHint.show}
-        >
-          <span className="text-gray-400 dark:text-gray-500 ml-1">透明背景</span>
-          <Select
-            value={transparentOutputEnabled ? 'on' : 'off'}
-            onChange={(val) => {
-              if (!transparentOutputAvailable) return
-              setParams({ transparent_output: val === 'on', output_compression: null })
-            }}
-            options={[
-              { label: 'false', value: 'off' },
-              { label: 'true', value: 'on' },
-            ]}
-            showValueTooltips={false}
-            className={selectClass}
-            onOpenChange={onTransparentOutputMenuOpenChange}
-          />
-          <ButtonTooltip
-            visible={transparentOutputHint.visible}
-            text="基于提示词与后处理，并非模型原生生成"
-          />
-        </label>
-      ) : (
-        <label
-          className="relative flex flex-col gap-0.5"
-          onMouseEnter={compressionHint.show}
-          onMouseLeave={compressionHint.hide}
-          onTouchStart={compressionHint.startTouch}
-          onTouchEnd={compressionHint.clearTimer}
-          onTouchCancel={compressionHint.hide}
-          onClick={compressionHint.show}
-        >
-          <span className="text-gray-400 dark:text-gray-500 ml-1">压缩率</span>
-          <input
-            value={outputCompressionInput}
-            onChange={(e) => setOutputCompressionInput(e.target.value)}
-            onBlur={commitOutputCompression}
-            disabled={compressionDisabled}
-            type="number"
-            min={0}
-            max={100}
-            placeholder="0-100"
-            className={`px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-white/[0.08] focus:outline-none text-xs transition-all duration-200 shadow-sm ${
-              compressionDisabled
-                ? 'bg-gray-100/50 dark:bg-white/[0.05] opacity-50 cursor-not-allowed'
-                : 'bg-white/50 dark:bg-white/[0.03]'
-              }`}
-          />
-          <ButtonTooltip
-            visible={compressionHint.visible}
-            text={isFalProvider ? 'fal.ai 不支持压缩率参数' : '仅 JPEG 和 WebP 支持压缩率'}
-          />
-        </label>
-      )}
+      <label className="flex flex-col gap-0.5">
+        <span className="ml-1 text-gray-400 dark:text-gray-500">背景</span>
+        <Select
+          value={params.output_format === 'jpeg' ? 'opaque' : params.background}
+          onChange={(value) => {
+            if (params.output_format !== 'jpeg') setParams({ background: value as TaskParams['background'] })
+          }}
+          options={[
+            { label: 'auto', value: 'auto' },
+            { label: 'opaque', value: 'opaque' },
+            { label: 'transparent', value: 'transparent' },
+          ]}
+          disabled={params.output_format === 'jpeg'}
+          showValueTooltips={false}
+          className={params.output_format === 'jpeg'
+            ? 'cursor-not-allowed rounded-xl border border-gray-200/60 bg-gray-100/50 px-3 py-1.5 text-xs opacity-50 shadow-sm transition-all duration-200 dark:border-white/[0.08] dark:bg-white/[0.05]'
+            : selectClass}
+        />
+      </label>
+      <label
+        className="relative flex flex-col gap-0.5"
+        onMouseEnter={compressionHint.show}
+        onMouseLeave={compressionHint.hide}
+        onTouchStart={compressionHint.startTouch}
+        onTouchEnd={compressionHint.clearTimer}
+        onTouchCancel={compressionHint.hide}
+        onClick={compressionHint.show}
+      >
+        <span className="ml-1 text-gray-400 dark:text-gray-500">压缩率</span>
+        <input
+          value={outputCompressionInput}
+          onChange={(event) => setOutputCompressionInput(event.target.value)}
+          onBlur={commitOutputCompression}
+          disabled={compressionDisabled}
+          type="number"
+          min={0}
+          max={100}
+          placeholder="0-100"
+          className={`rounded-xl border border-gray-200/60 px-3 py-1.5 text-xs shadow-sm outline-none transition-all duration-200 dark:border-white/[0.08] ${
+            compressionDisabled
+              ? 'cursor-not-allowed bg-gray-100/50 opacity-50 dark:bg-white/[0.05]'
+              : 'bg-white/50 dark:bg-white/[0.03]'
+          }`}
+        />
+        <ButtonTooltip
+          visible={compressionHint.visible}
+          text={isFalProvider ? 'fal.ai 不支持压缩率参数' : '仅 JPEG 和 WebP 支持压缩率'}
+        />
+      </label>
       <label
         className="relative flex flex-col gap-0.5"
         onMouseEnter={moderationHint.show}
@@ -235,11 +359,11 @@ export default function InputParamsPanel({
         onTouchCancel={moderationHint.hide}
         onClick={moderationHint.show}
       >
-        <span className="text-gray-400 dark:text-gray-500 ml-1">审核</span>
+        <span className="ml-1 text-gray-400 dark:text-gray-500">审核</span>
         <Select
           value={moderationDisabled ? 'auto' : params.moderation}
-          onChange={(val) => {
-            if (!moderationDisabled) setParams({ moderation: val as TaskParams['moderation'] })
+          onChange={(value) => {
+            if (!moderationDisabled) setParams({ moderation: value as TaskParams['moderation'] })
           }}
           options={[
             { label: 'auto', value: 'auto' },
@@ -248,59 +372,12 @@ export default function InputParamsPanel({
           disabled={moderationDisabled}
           showValueTooltips={false}
           className={moderationDisabled
-            ? 'px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-white/[0.08] bg-gray-100/50 dark:bg-white/[0.05] opacity-50 cursor-not-allowed text-xs transition-all duration-200 shadow-sm'
+            ? 'cursor-not-allowed rounded-xl border border-gray-200/60 bg-gray-100/50 px-3 py-1.5 text-xs opacity-50 shadow-sm transition-all duration-200 dark:border-white/[0.08] dark:bg-white/[0.05]'
             : selectClass}
         />
-        <ButtonTooltip
-          visible={moderationDisabled && moderationHint.visible}
-          text="fal.ai 不支持审核参数"
-        />
+        <ButtonTooltip visible={moderationDisabled && moderationHint.visible} text="fal.ai 不支持审核参数" />
       </label>
-      <label
-        className="relative flex flex-col gap-0.5"
-        onMouseEnter={() => { showAgentNHint(); streamConcurrentHint.show() }}
-        onMouseLeave={() => { hideNLimitHint(); streamConcurrentHint.hide() }}
-        onTouchStart={() => { startAgentNHintTouch(); streamConcurrentHint.startTouch() }}
-        onTouchEnd={() => { clearAgentNHintTouchTimer(); streamConcurrentHint.clearTimer() }}
-        onTouchCancel={() => {
-          clearAgentNHintTouchTimer()
-          hideNLimitHint()
-          streamConcurrentHint.hide()
-        }}
-        onClick={() => { showAgentNHint(); streamConcurrentHint.show() }}
-      >
-        <span className="text-gray-400 dark:text-gray-500 ml-1">数量</span>
-        <input
-          value={nInput}
-          onChange={(e) => handleNInputChange(e.target.value)}
-          onFocus={() => setNInputFocused(true)}
-          onBlur={() => {
-            setNInputFocused(false)
-            commitN()
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowUp') {
-              handleNLimitIncreaseAttempt(() => e.preventDefault())
-            }
-          }}
-          onWheel={(e) => {
-            if (e.deltaY < 0) {
-              handleNLimitIncreaseAttempt(() => e.preventDefault())
-            }
-          }}
-          disabled={agentAutoImageCount}
-          type={agentAutoImageCount ? 'text' : 'number'}
-          min={agentAutoImageCount ? undefined : 1}
-          max={agentAutoImageCount ? undefined : outputImageLimit}
-          className={`px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-white/[0.08] focus:outline-none text-xs transition-all duration-200 shadow-sm ${
-            agentAutoImageCount
-              ? 'bg-gray-100/50 dark:bg-white/[0.05] opacity-50 cursor-not-allowed'
-              : 'bg-white/50 dark:bg-white/[0.03]'
-          }`}
-        />
-        <ButtonTooltip visible={nLimitHint.visible} text={nLimitHintText} />
-        <ButtonTooltip visible={streamConcurrentByN && streamConcurrentHint.visible && !nLimitHint.visible} text="数量大于 1 时会将多图生成拆分为并发单图" />
-      </label>
+      {quantityControl}
     </div>
   )
 }

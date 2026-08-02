@@ -70,7 +70,12 @@ function normalizeParams(value: unknown, fallback: TaskParams): TaskParams {
   if (!isRecord(value)) return fallback
   return {
     size: typeof value.size === 'string' ? value.size : fallback.size,
+    aspect_ratio: value.aspect_ratio === 'auto' || value.aspect_ratio === '1:1' || value.aspect_ratio === '1:4' || value.aspect_ratio === '1:8' || value.aspect_ratio === '2:3' || value.aspect_ratio === '3:2' || value.aspect_ratio === '3:4' || value.aspect_ratio === '4:1' || value.aspect_ratio === '4:3' || value.aspect_ratio === '4:5' || value.aspect_ratio === '5:4' || value.aspect_ratio === '8:1' || value.aspect_ratio === '9:16' || value.aspect_ratio === '16:9' || value.aspect_ratio === '21:9'
+      ? value.aspect_ratio
+      : fallback.aspect_ratio,
+    thinking_level: value.thinking_level === 'minimal' || value.thinking_level === 'high' ? value.thinking_level : fallback.thinking_level,
     quality: value.quality === 'auto' || value.quality === 'low' || value.quality === 'medium' || value.quality === 'high' ? value.quality : fallback.quality,
+    background: value.background === 'auto' || value.background === 'opaque' || value.background === 'transparent' ? value.background : fallback.background,
     output_format: value.output_format === 'png' || value.output_format === 'jpeg' || value.output_format === 'webp' ? value.output_format : fallback.output_format,
     output_compression: value.output_compression === null || (typeof value.output_compression === 'number' && Number.isFinite(value.output_compression))
       ? value.output_compression

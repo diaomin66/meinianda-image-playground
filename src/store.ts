@@ -21,6 +21,7 @@ import type {
 import { DEFAULT_AGENT_MAX_TOOL_ROUNDS, DEFAULT_PARAMS } from './types'
 import { DEFAULT_SETTINGS, getActiveApiProfile, getAgentImageApiProfile, getAgentTextApiProfile, getCustomProviderDefinition, mergeImportedSettings, normalizeSettings, validateApiProfile } from './lib/apiProfiles'
 import { lockApiSettings } from './lib/fixedApiProfiles'
+import { GEMINI_MAX_REFERENCE_IMAGES } from './lib/imageModels'
 import { dismissAllTooltips } from './lib/tooltipDismiss'
 import { remapImageMentionsForOrder, replaceImageMentionsForApi } from './lib/promptImageMentions'
 import {
@@ -995,7 +996,11 @@ function genId(): string {
 
 function getPersistableTask(task: TaskRecord): TaskRecord {
   const rawResponsePayload = getPersistableRawResponsePayload(task.rawResponsePayload)
-  return rawResponsePayload === task.rawResponsePayload ? task : { ...task, rawResponsePayload }
+  return {
+    ...task,
+    params: { ...DEFAULT_PARAMS, ...task.params },
+    rawResponsePayload,
+  }
 }
 
 function putTask(task: TaskRecord): Promise<IDBValidKey> {
@@ -1374,7 +1379,10 @@ async function recoverFalTask(taskId: string) {
 /** 初始化：从 IndexedDB 加载任务，按需恢复输入图片，并清理孤立图片 */
 export async function initStore() {
   const legacyAgentConversations = normalizeAgentConversations(useStore.getState().agentConversations)
-  const storedTasks = await getAllTasks()
+  const storedTasks = (await getAllTasks()).map((task) => ({
+    ...task,
+    params: { ...DEFAULT_PARAMS, ...task.params },
+  }))
   const storedAgentConversations = normalizeAgentConversations(await getAllAgentConversations())
   let loadedAgentConversations = mergePersistedAgentConversations(storedAgentConversations, legacyAgentConversations)
   const currentAgentConversations = normalizeAgentConversations(useStore.getState().agentConversations)
@@ -1610,6 +1618,16 @@ export async function submitTask(options: { allowFullMask?: boolean; useCurrentA
 
   if (!prompt.trim()) {
     showToast('请输入提示词', 'error')
+    return
+  }
+
+  if (activeProfile.provider === 'gemini' && inputImages.length > GEMINI_MAX_REFERENCE_IMAGES) {
+    showToast(`Gemini 最多支持 ${GEMINI_MAX_REFERENCE_IMAGES} 张参考图，请先移除多余图片`, 'error')
+    return
+  }
+
+  if (activeProfile.provider === 'gemini' && maskDraft) {
+    showToast('Gemini Interactions API 不支持遮罩参数，请移除遮罩后使用参考图编辑', 'error')
     return
   }
 
@@ -4278,7 +4296,7 @@ export async function exportData(options: ExportOptions = { exportConfig: true, 
       const a = document.createElement('a')
       const suffix = plan.length > 1 ? `_${String(plan.length).padStart(2, '0')}parts_part${String(partNumber).padStart(2, '0')}` : ''
       a.href = url
-      a.download = `gpt-image-playground-backup_${formatExportFileTime(new Date(exportedAt))}${suffix}.zip`
+      a.download = `meinianda-image-playground-backup_${formatExportFileTime(new Date(exportedAt))}${suffix}.zip`
       document.body.appendChild(a)
       a.click()
       a.remove()

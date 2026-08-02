@@ -15,7 +15,7 @@ export const ZIP_DOWNLOAD_ROUTE_VALUES = [
 ] as const
 export type ZipDownloadRoute = typeof ZIP_DOWNLOAD_ROUTE_VALUES[number]
 export const DEFAULT_ZIP_DOWNLOAD_ROUTES: ZipDownloadRoute[] = ['task-selection', 'favorite-collection-selection']
-export type BuiltInApiProvider = 'openai' | 'fal'
+export type BuiltInApiProvider = 'openai' | 'gemini' | 'fal'
 export type ApiProvider = BuiltInApiProvider | string
 export type CustomProviderTemplate = 'http-image'
 export const DEFAULT_STREAM_PARTIAL_IMAGES = 1
@@ -122,7 +122,10 @@ export interface AppSettings {
 
 export interface TaskParams {
   size: string
+  aspect_ratio: 'auto' | '1:1' | '1:4' | '1:8' | '2:3' | '3:2' | '3:4' | '4:1' | '4:3' | '4:5' | '5:4' | '8:1' | '9:16' | '16:9' | '21:9'
+  thinking_level: 'minimal' | 'high'
   quality: 'auto' | 'low' | 'medium' | 'high'
+  background: 'auto' | 'opaque' | 'transparent'
   output_format: 'png' | 'jpeg' | 'webp'
   output_compression: number | null
   moderation: 'auto' | 'low'
@@ -132,7 +135,10 @@ export interface TaskParams {
 
 export const DEFAULT_PARAMS: TaskParams = {
   size: 'auto',
+  aspect_ratio: 'auto',
+  thinking_level: 'minimal',
   quality: 'auto',
+  background: 'auto',
   output_format: 'png',
   output_compression: null,
   moderation: 'auto',
@@ -333,6 +339,7 @@ export interface ImageResponseItem {
   revised_prompt?: string
   size?: string
   quality?: string
+  background?: string
   output_format?: string
   output_compression?: number
   moderation?: string
@@ -342,6 +349,7 @@ export interface ImageApiResponse {
   data: ImageResponseItem[]
   size?: string
   quality?: string
+  background?: string
   output_format?: string
   output_compression?: number
   moderation?: string

@@ -203,6 +203,9 @@ export function pickActualParams(source: unknown): Partial<TaskParams> {
   if (record.quality === 'auto' || record.quality === 'low' || record.quality === 'medium' || record.quality === 'high') {
     actualParams.quality = record.quality
   }
+  if (record.background === 'auto' || record.background === 'opaque' || record.background === 'transparent') {
+    actualParams.background = record.background
+  }
   if (record.output_format === 'png' || record.output_format === 'jpeg' || record.output_format === 'webp') {
     actualParams.output_format = record.output_format
   }

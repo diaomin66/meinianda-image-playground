@@ -12,6 +12,7 @@ import { dismissAllTooltips } from '../lib/tooltipDismiss'
 import { downloadImageEntriesAsZip, downloadImageIds, getImageZipEntries } from '../lib/downloadImages'
 import { isAgentTaskPromptPending } from '../lib/taskPromptDisplay'
 import { replaceImageMentionsForApi } from '../lib/promptImageMentions'
+import { GEMINI_FLASH_IMAGE_MODEL } from '../lib/imageModels'
 import { CloseIcon, CodeIcon, CopyIcon, DownloadIcon, EditIcon, LinkIcon, TrashIcon } from './icons'
 
 import ViewportTooltip from './ViewportTooltip'
@@ -255,9 +256,10 @@ export default function DetailModal() {
   const codexCliPromptKey = getCodexCliPromptKey(settings)
   const hasHandledPromptWarning = settings.codexCli || dismissedCodexCliPrompts.includes(codexCliPromptKey)
   const taskProvider = task.apiProvider
+  const isGeminiTask = taskProvider === 'gemini'
   const isOpenAiTask = (taskProvider ?? 'openai') === 'openai'
   const showPromptWarning = Boolean(isOpenAiTask && task.apiMode === 'responses' && currentOutputImageId && (!currentRevisedPrompt || showRevisedPrompt) && !hasHandledPromptWarning)
-  const taskProviderName = taskProvider === 'fal' ? 'fal.ai' : taskProvider ? 'OpenAI' : '未知'
+  const taskProviderName = taskProvider === 'fal' ? 'fal.ai' : taskProvider === 'gemini' ? 'Gemini' : taskProvider ? 'OpenAI' : '未知'
   const taskProfileName = task.apiProfileName || '未知'
   const taskModel = task.apiModel || '未知'
   const showSourceInfo = Boolean(task.apiProvider || task.apiProfileName || task.apiModel)
@@ -267,8 +269,6 @@ export default function DetailModal() {
   const streamPreviewLen = streamPreviewItems.length
   const currentStreamPreviewSrc = activeStreamPreviewSrc
   const streamPartialImageIds = task.streamPartialImageIds ?? []
-  const isPngOutput = task.params.output_format === 'png'
-  const transparentOutputText = task.transparentOutput || task.params.transparent_output ? 'true' : 'false'
   const currentTransparentOutputFailed = Boolean(currentOutputImageId && task.transparentOutput && task.transparentOriginalImages?.[currentOutputImageIndex] === '')
   const outputCompressionText = task.params.output_compression == null ? '未设置' : String(task.params.output_compression)
 
@@ -964,62 +964,89 @@ export default function DetailModal() {
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2 text-xs mb-4 min-w-0">
-              <div className="bg-gray-50 dark:bg-white/[0.03] rounded-lg px-3 py-2 min-w-0 overflow-hidden">
-                <span className="text-gray-400 dark:text-gray-500">尺寸</span>
+            <div className="mb-4 grid min-w-0 grid-cols-2 gap-2 text-xs">
+              <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                <span className="text-gray-400 dark:text-gray-500">{isGeminiTask ? '分辨率' : '尺寸'}</span>
                 <br />
-                <div className="mt-0.5 overflow-x-auto hide-scrollbar whitespace-nowrap mask-edge-r pr-2">
+                <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
                   <DetailParamValue task={task} paramKey="size" className="font-medium" actualParams={currentActualParams} />
                 </div>
               </div>
-              <div className="bg-gray-50 dark:bg-white/[0.03] rounded-lg px-3 py-2 min-w-0 overflow-hidden">
-                <span className="text-gray-400 dark:text-gray-500">质量</span>
-                <br />
-                <div className="mt-0.5 overflow-x-auto hide-scrollbar whitespace-nowrap mask-edge-r pr-2">
-                  <DetailParamValue task={task} paramKey="quality" className="font-medium" actualParams={currentActualParams} />
-                </div>
-              </div>
-              <div className="bg-gray-50 dark:bg-white/[0.03] rounded-lg px-3 py-2 min-w-0 overflow-hidden">
-                <span className="text-gray-400 dark:text-gray-500">格式</span>
-                <br />
-                <div className="mt-0.5 overflow-x-auto hide-scrollbar whitespace-nowrap mask-edge-r pr-2">
-                  <DetailParamValue task={task} paramKey="output_format" className="font-medium" actualParams={currentActualParams} />
-                </div>
-              </div>
-              {isPngOutput ? (
-                <div className="bg-gray-50 dark:bg-white/[0.03] rounded-lg px-3 py-2 min-w-0 overflow-hidden">
-                  <span className="text-gray-400 dark:text-gray-500">透明背景</span>
-                  <br />
-                  <div className="mt-0.5 overflow-x-auto hide-scrollbar whitespace-nowrap mask-edge-r pr-2">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">{transparentOutputText}</span>
-                    {currentTransparentOutputFailed && (
-                      <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-medium uppercase leading-none text-red-600 dark:bg-red-500/10 dark:text-red-400">
-                        failed
-                      </span>
-                    )}
+              {isGeminiTask ? (
+                <>
+                  <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <span className="text-gray-400 dark:text-gray-500">宽高比</span>
+                    <br />
+                    <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
+                      <DetailParamValue task={task} paramKey="aspect_ratio" className="font-medium" actualParams={currentActualParams} />
+                    </div>
                   </div>
-                </div>
+                  <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <span className="text-gray-400 dark:text-gray-500">格式</span>
+                    <br />
+                    <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
+                      <DetailParamValue task={task} paramKey="output_format" className="font-medium" actualParams={currentActualParams} />
+                    </div>
+                  </div>
+                  {task.apiModel === GEMINI_FLASH_IMAGE_MODEL && (
+                    <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                      <span className="text-gray-400 dark:text-gray-500">思考级别</span>
+                      <br />
+                      <span className="mt-0.5 font-medium text-gray-700 dark:text-gray-300">{task.params.thinking_level}</span>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="bg-gray-50 dark:bg-white/[0.03] rounded-lg px-3 py-2 min-w-0 overflow-hidden">
-                  <span className="text-gray-400 dark:text-gray-500">压缩率</span>
-                  <br />
-                  <div className="mt-0.5 overflow-x-auto hide-scrollbar whitespace-nowrap mask-edge-r pr-2">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">{outputCompressionText}</span>
+                <>
+                  <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <span className="text-gray-400 dark:text-gray-500">质量</span>
+                    <br />
+                    <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
+                      <DetailParamValue task={task} paramKey="quality" className="font-medium" actualParams={currentActualParams} />
+                    </div>
                   </div>
-                </div>
+                  <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <span className="text-gray-400 dark:text-gray-500">格式</span>
+                    <br />
+                    <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
+                      <DetailParamValue task={task} paramKey="output_format" className="font-medium" actualParams={currentActualParams} />
+                    </div>
+                  </div>
+                  <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <span className="text-gray-400 dark:text-gray-500">背景</span>
+                    <br />
+                    <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
+                      {task.transparentOutput || task.params.transparent_output ? (
+                        <span className="font-medium text-gray-700 dark:text-gray-300">transparent</span>
+                      ) : (
+                        <DetailParamValue task={task} paramKey="background" className="font-medium" actualParams={currentActualParams} />
+                      )}
+                      {currentTransparentOutputFailed && (
+                        <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-medium uppercase leading-none text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                          failed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <span className="text-gray-400 dark:text-gray-500">压缩率</span>
+                    <br />
+                    <span className="mt-0.5 font-medium text-gray-700 dark:text-gray-300">{outputCompressionText}</span>
+                  </div>
+                  <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <span className="text-gray-400 dark:text-gray-500">审核</span>
+                    <br />
+                    <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
+                      <DetailParamValue task={task} paramKey="moderation" className="font-medium" actualParams={currentActualParams} />
+                    </div>
+                  </div>
+                </>
               )}
-              <div className="bg-gray-50 dark:bg-white/[0.03] rounded-lg px-3 py-2 min-w-0 overflow-hidden">
-                <span className="text-gray-400 dark:text-gray-500">审核</span>
-                <br />
-                <div className="mt-0.5 overflow-x-auto hide-scrollbar whitespace-nowrap mask-edge-r pr-2">
-                  <DetailParamValue task={task} paramKey="moderation" className="font-medium" actualParams={currentActualParams} />
-                </div>
-              </div>
               {!isAgentTask && (
-                <div className="bg-gray-50 dark:bg-white/[0.03] rounded-lg px-3 py-2 min-w-0 overflow-hidden">
+                <div className="min-w-0 overflow-hidden rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
                   <span className="text-gray-400 dark:text-gray-500">数量</span>
                   <br />
-                  <div className="mt-0.5 overflow-x-auto hide-scrollbar whitespace-nowrap mask-edge-r pr-2">
+                  <div className="mask-edge-r mt-0.5 overflow-x-auto whitespace-nowrap pr-2 hide-scrollbar">
                     <DetailParamValue task={task} paramKey="n" className="font-medium" />
                   </div>
                 </div>

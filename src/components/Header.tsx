@@ -152,12 +152,12 @@ export default function Header() {
                 <>
                   <span className="min-w-0 truncate text-[17px] font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:hidden" title={favoriteCollectionTitle}>{favoriteCollectionTitle}</span>
                   <span className="hidden text-lg font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:inline">
-                    GPT Image Playground
+                    Meinianda Image Playground
                   </span>
                 </>
               ) : (
                 <span className="text-[17px] sm:text-lg font-bold tracking-tight text-gray-800 dark:text-gray-100">
-                  GPT Image Playground
+                  Meinianda Image Playground
                 </span>
               )}
             </h1>

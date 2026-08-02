@@ -8,6 +8,8 @@ import { ensureImageCached, getCachedImage } from '../lib/imageCache'
 import { DEFAULT_FAL_IMAGE_SIZE, getChangedParams, getOutputImageLimitForSettings, normalizeParamsForSettings } from '../lib/paramCompatibility'
 import { getAtImageQuery, getImageMentionLabel, getPromptIndexFromVisibleIndex, getPromptMentionParts, getSelectedImageMentionLabel, imageMentionMatches, insertImageMentionAtVisibleRange, insertTextMentionAtVisibleRange, isCursorInSelectedImageMention, stripImageMentionMarkers } from '../lib/promptImageMentions'
 import { normalizeCodexCliImageSize, normalizeImageSize } from '../lib/size'
+import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_MAX_REFERENCE_IMAGES, GPT_IMAGE_MODEL, isGalleryImageModel, type GalleryImageModel } from '../lib/imageModels'
+import { FIXED_GEMINI_PROFILE_ID, FIXED_IMAGE_PROFILE_ID } from '../lib/fixedApiProfiles'
 import { createMaskPreviewDataUrl } from '../lib/canvasImage'
 import { getSafeBoundingClientRect } from '../lib/domRect'
 import { collectAgentRoundOutputImageSlots } from '../lib/agentImageReferences'
@@ -23,7 +25,7 @@ import InputBatchBars from './input/inputBatchBars'
 import InputParamsPanel from './input/inputParamsPanel'
 
 /** API 支持的最大参考图数量 */
-const API_MAX_IMAGES = 16
+const OPENAI_MAX_REFERENCE_IMAGES = 16
 
 function getFavoriteCollectionTasksForBatch(collectionId: string, tasks: TaskRecord[], defaultFavoriteCollectionId: string | null) {
   const favoriteTasks = tasks.filter((task) => task.isFavorite)
@@ -93,6 +95,7 @@ export default function InputBar() {
   const params = useStore((s) => s.params)
   const setParams = useStore((s) => s.setParams)
   const settings = useStore((s) => s.settings)
+  const setSettings = useStore((s) => s.setSettings)
   const reusedTaskApiProfileId = useStore((s) => s.reusedTaskApiProfileId)
   const setShowSettings = useStore((s) => s.setShowSettings)
   const setLightboxImageId = useStore((s) => s.setLightboxImageId)
@@ -458,22 +461,28 @@ export default function InputBar() {
     setPrompt(getContentEditablePlainText(el))
   }, [setPrompt])
   const activeProvider = activeProfile.provider
+  const isGeminiProvider = activeProvider === 'gemini'
   const isFalProvider = activeProvider === 'fal'
+  const selectedModel: GalleryImageModel = isGalleryImageModel(activeProfile.model)
+    ? activeProfile.model
+    : GPT_IMAGE_MODEL
   const agentAutoImageCount = appMode === 'agent'
-  const moderationDisabled = isFalProvider
-  const transparentOutputAvailable = appMode === 'gallery'
-  const showTransparentOutputControl = transparentOutputAvailable && params.output_format === 'png'
-  const transparentOutputEnabled = transparentOutputAvailable && showTransparentOutputControl && params.transparent_output
+  const moderationDisabled = isFalProvider || isGeminiProvider
   const compressionDisabled = params.output_format === 'png' || isFalProvider
   const outputImageLimit = getOutputImageLimitForSettings(effectiveSettings)
   const isFalTextToImage = isFalProvider && inputImages.length === 0
   const nDraftValue = Number(nInput)
   const effectiveNValue = Number.isNaN(nDraftValue) ? params.n : nDraftValue
-  const streamConcurrentByN = activeProfile.provider === 'openai' && activeProfile.streamImages === true && !agentAutoImageCount && effectiveNValue > 1
+  const streamConcurrentByN = !agentAutoImageCount && effectiveNValue > 1 && (
+    isGeminiProvider ||
+    (activeProfile.provider === 'openai' && activeProfile.streamImages === true)
+  )
   const nLimitHintText = agentAutoImageCount
     ? 'Agent 模式下数量由模型根据提示词自动决定'
     : isFalProvider
     ? `fal.ai 最大请求数量为 ${outputImageLimit}`
+    : isGeminiProvider
+    ? `Gemini 会并发提交，最大数量为 ${outputImageLimit}`
     : `OpenAI 最大请求数量为 ${outputImageLimit}`
   const displaySize = isFalTextToImage && params.size === 'auto'
     ? DEFAULT_FAL_IMAGE_SIZE
@@ -491,12 +500,9 @@ export default function InputBar() {
         { label: 'medium', value: 'medium' },
         { label: 'high', value: 'high' },
       ]
-  const atImageLimit = inputImages.length >= API_MAX_IMAGES
-  const uploadImageTooltipText = atImageLimit ? `参考图数量已达上限（${API_MAX_IMAGES} 张），无法继续添加` : '上传图片'
-  const transparentOutputHint = useHintTooltip()
-  const handleTransparentOutputMenuOpenChange = useCallback((open: boolean) => {
-    if (open) transparentOutputHint.hide()
-  }, [transparentOutputHint.hide])
+  const maxReferenceImages = isGeminiProvider ? GEMINI_MAX_REFERENCE_IMAGES : OPENAI_MAX_REFERENCE_IMAGES
+  const atImageLimit = inputImages.length >= maxReferenceImages
+  const uploadImageTooltipText = atImageLimit ? `参考图数量已达上限（${maxReferenceImages} 张），无法继续添加` : '上传图片'
   const compressionHint = useHintTooltip({ enabled: () => compressionDisabled })
   const moderationHint = useHintTooltip({ enabled: () => moderationDisabled })
   const sizeHint = useHintTooltip({ enabled: () => isFalTextToImage || activeProfile.codexCli })
@@ -548,9 +554,18 @@ export default function InputBar() {
     : []
   const showAtImageMenu = !atImageMenuDismissed && atImageOptions.length > 0
 
-
-
-
+  const handleGalleryModelChange = useCallback((model: GalleryImageModel) => {
+    if (appMode !== 'gallery') return
+    const profileId = model === GPT_IMAGE_MODEL ? FIXED_IMAGE_PROFILE_ID : FIXED_GEMINI_PROFILE_ID
+    setSettings({
+      activeProfileId: profileId,
+      profiles: settings.profiles.map((profile) =>
+        profile.id === FIXED_GEMINI_PROFILE_ID
+          ? { ...profile, model: model === GPT_IMAGE_MODEL ? GEMINI_FLASH_IMAGE_MODEL : model }
+          : profile,
+      ),
+    })
+  }, [appMode, setSettings, settings.profiles])
 
   const selectAtImageOption = useCallback((option: AtImageOption) => {
     const el = textareaRef.current
@@ -797,15 +812,15 @@ export default function InputBar() {
   const handleFiles = async (files: FileList | File[]) => {
     try {
       const currentCount = useStore.getState().inputImages.length
-      if (currentCount >= API_MAX_IMAGES) {
+      if (currentCount >= maxReferenceImages) {
         useStore.getState().showToast(
-          `参考图数量已达上限（${API_MAX_IMAGES} 张），无法继续添加`,
+          `参考图数量已达上限（${maxReferenceImages} 张），无法继续添加`,
           'error',
         )
         return
       }
 
-      const remaining = API_MAX_IMAGES - currentCount
+      const remaining = maxReferenceImages - currentCount
       const accepted = Array.from(files).filter((f) => f.type.startsWith('image/'))
       const toAdd = accepted.slice(0, remaining)
       const discarded = accepted.length - toAdd.length
@@ -816,7 +831,7 @@ export default function InputBar() {
 
       if (discarded > 0) {
         useStore.getState().showToast(
-          `已达上限 ${API_MAX_IMAGES} 张，${discarded} 张图片被丢弃`,
+          `已达上限 ${maxReferenceImages} 张，${discarded} 张图片被丢弃`,
           'error',
         )
       }
@@ -1510,20 +1525,21 @@ export default function InputBar() {
 
   const renderParams = (cols: string) => (
     <InputParamsPanel
-      cols={cols}
+      cols={cols === 'grid-cols-6' && appMode === 'gallery'
+        ? isGeminiProvider ? 'grid-cols-6' : 'grid-cols-8'
+        : cols}
       params={params}
       setParams={setParams}
       activeProfile={activeProfile}
+      showModelSelector={appMode === 'gallery'}
+      selectedModel={selectedModel}
+      onModelChange={handleGalleryModelChange}
+      isGeminiProvider={isGeminiProvider}
       isFalProvider={isFalProvider}
       isFalTextToImage={isFalTextToImage}
       displaySize={displaySize}
       qualityOptions={qualityOptions}
       selectClass={selectClass}
-      transparentOutputAvailable={transparentOutputAvailable}
-      showTransparentOutputControl={showTransparentOutputControl}
-      transparentOutputEnabled={transparentOutputEnabled}
-      transparentOutputHint={transparentOutputHint}
-      onTransparentOutputMenuOpenChange={handleTransparentOutputMenuOpenChange}
       compressionHint={compressionHint}
       compressionDisabled={compressionDisabled}
       outputCompressionInput={outputCompressionInput}
@@ -1557,9 +1573,9 @@ export default function InputBar() {
 
   return (
     <>
-      <DragUploadOverlay visible={isDragging} atImageLimit={atImageLimit} maxImages={API_MAX_IMAGES} />
+      <DragUploadOverlay visible={isDragging} atImageLimit={atImageLimit} maxImages={maxReferenceImages} />
 
-      {showSizePicker && (
+      {showSizePicker && !isGeminiProvider && (
         <SizePickerModal
           currentSize={isFalTextToImage && params.size === 'auto' ? DEFAULT_FAL_IMAGE_SIZE : params.size}
           onSelect={(size) => setParams({ size })}

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { strToU8, zipSync } from 'fflate'
 import { DEFAULT_PARAMS } from './types'
 import { createDefaultFalProfile, createDefaultOpenAIProfile, DEFAULT_RESPONSES_MODEL, DEFAULT_SETTINGS, normalizeSettings } from './lib/apiProfiles'
-import { FIXED_API_BASE_URL, FIXED_IMAGE_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID } from './lib/fixedApiProfiles'
+import { FIXED_API_BASE_URL, FIXED_GEMINI_PROFILE_ID, FIXED_IMAGE_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID } from './lib/fixedApiProfiles'
 import type { AgentConversation, ExportData, StoredImage, StoredImageThumbnail, TaskRecord } from './types'
 import { getSelectedImageMentionLabel } from './lib/promptImageMentions'
 import { hasActiveDataOperations } from './lib/dataOperations'
@@ -2327,8 +2327,8 @@ describe('data import', () => {
 
     const profiles = useStore.getState().settings.profiles
     expect(imported).toBe(true)
-    expect(profiles.map((profile) => profile.id)).toEqual([FIXED_IMAGE_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID])
-    expect(profiles.every((profile) => profile.baseUrl === FIXED_API_BASE_URL)).toBe(true)
+    expect(profiles.map((profile) => profile.id)).toEqual([FIXED_IMAGE_PROFILE_ID, FIXED_GEMINI_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID])
+    expect(profiles.filter((profile) => profile.id !== FIXED_GEMINI_PROFILE_ID).every((profile) => profile.baseUrl === FIXED_API_BASE_URL)).toBe(true)
   })
 
   it('rejects an incomplete multipart backup before importing data', async () => {

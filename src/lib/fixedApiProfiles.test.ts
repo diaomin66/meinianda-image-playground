@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_IMAGES_MODEL, DEFAULT_RESPONSES_MODEL } from './apiProfiles'
 import {
   FIXED_API_BASE_URL,
+  FIXED_GEMINI_API_BASE_URL,
+  FIXED_GEMINI_PROFILE_ID,
   FIXED_IMAGE_PROFILE_ID,
   FIXED_RESPONSES_PROFILE_ID,
   lockApiSettings,
 } from './fixedApiProfiles'
+import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_PRO_IMAGE_MODEL } from './imageModels'
 
 describe('locked API settings', () => {
-  it('keeps only the two fixed profiles while preserving their API keys', () => {
+  it('keeps only the three fixed profiles while preserving their API keys', () => {
     const settings = lockApiSettings({
       profiles: [
         {
@@ -48,6 +51,15 @@ describe('locked API settings', () => {
         apiMode: 'images',
       }),
       expect.objectContaining({
+        id: FIXED_GEMINI_PROFILE_ID,
+        name: 'Gemini 生图',
+        provider: 'gemini',
+        baseUrl: FIXED_GEMINI_API_BASE_URL,
+        apiKey: 'image-key',
+        model: GEMINI_FLASH_IMAGE_MODEL,
+        apiMode: 'images',
+      }),
+      expect.objectContaining({
         id: FIXED_RESPONSES_PROFILE_ID,
         name: '语言',
         baseUrl: FIXED_API_BASE_URL,
@@ -65,6 +77,35 @@ describe('locked API settings', () => {
   it('uses the existing key for both fixed profiles during a one-profile migration', () => {
     const settings = lockApiSettings({ apiKey: 'shared-key' })
 
-    expect(settings.profiles.map((profile) => profile.apiKey)).toEqual(['shared-key', 'shared-key'])
+    expect(settings.profiles.map((profile) => profile.apiKey)).toEqual(['shared-key', 'shared-key', 'shared-key'])
+  })
+
+  it('preserves the selected Gemini model and active gallery profile', () => {
+    const settings = lockApiSettings({
+      activeProfileId: FIXED_GEMINI_PROFILE_ID,
+      profiles: [
+        {
+          id: FIXED_GEMINI_PROFILE_ID,
+          name: 'Gemini',
+          provider: 'gemini',
+          baseUrl: 'https://example.com/v1beta',
+          apiKey: 'gemini-key',
+          model: GEMINI_PRO_IMAGE_MODEL,
+          timeout: 30,
+          apiMode: 'images',
+          codexCli: true,
+          apiProxy: true,
+        },
+      ],
+    })
+
+    expect(settings.activeProfileId).toBe(FIXED_GEMINI_PROFILE_ID)
+    expect(settings.profiles.find((profile) => profile.id === FIXED_GEMINI_PROFILE_ID)).toMatchObject({
+      apiKey: 'gemini-key',
+      model: GEMINI_PRO_IMAGE_MODEL,
+      baseUrl: FIXED_GEMINI_API_BASE_URL,
+      codexCli: false,
+      apiProxy: false,
+    })
   })
 })

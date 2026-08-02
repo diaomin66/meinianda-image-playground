@@ -169,7 +169,7 @@ export default function HelpModal({ appMode, isFavoriteCollectionOverview = fals
         </div>
 
         <div className="pt-4 border-t border-gray-200 dark:border-white/[0.08] flex justify-center">
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">GPT Image Playground</span>
+          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Meinianda Image Playground</span>
         </div>
       </div>
     </div>,

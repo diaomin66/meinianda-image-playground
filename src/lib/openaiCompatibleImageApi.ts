@@ -133,6 +133,7 @@ function createResponsesImageTool(
     type: 'image_generation',
     action: isEdit ? 'edit' : 'generate',
     output_format: params.output_format,
+    background: params.background,
     moderation: params.moderation,
   }
 
@@ -271,6 +272,7 @@ function eventToImageResponseItem(event: Record<string, unknown>): ImageResponse
     revised_prompt: getStringValue(event, 'revised_prompt'),
     size: getStringValue(event, 'size'),
     quality: getStringValue(event, 'quality'),
+    background: getStringValue(event, 'background'),
     output_format: getStringValue(event, 'output_format'),
     output_compression: getNumberValue(event, 'output_compression'),
     moderation: getStringValue(event, 'moderation'),
@@ -508,6 +510,7 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
         formData.append('size', params.size)
       }
       formData.append('output_format', params.output_format)
+      formData.append('background', params.background)
       formData.append('moderation', params.moderation)
 
       if (!profile.codexCli) {
@@ -568,6 +571,7 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
         model: profile.model,
         prompt,
         output_format: params.output_format,
+        background: params.background,
         moderation: params.moderation,
       }
 

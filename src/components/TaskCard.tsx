@@ -5,6 +5,7 @@ import { ensureImageThumbnailCached, subscribeImageThumbnail } from '../lib/imag
 import { formatImageRatio } from '../lib/size'
 import { getParamDisplay, ActualValueBadge } from '../lib/paramDisplay'
 import { DEFAULT_IMAGES_MODEL, DEFAULT_FAL_MODEL } from '../lib/apiProfiles'
+import { GEMINI_FLASH_IMAGE_MODEL } from '../lib/imageModels'
 import { isAgentTaskPromptPending } from '../lib/taskPromptDisplay'
 import { CodeIcon, TransparentBgIcon } from './icons'
 import ViewportTooltip from './ViewportTooltip'
@@ -304,15 +305,21 @@ export default function TaskCard({
       : 'bg-blue-500'
     : 'bg-gray-200 dark:bg-gray-700'
 
+  const isGeminiTask = task.apiProvider === 'gemini'
   const qualityDisplay = getParamDisplay(task, 'quality')
-  const showQuality = task.params.quality !== 'auto' || qualityDisplay.isMismatch
+  const showQuality = !isGeminiTask && (task.params.quality !== 'auto' || qualityDisplay.isMismatch)
 
   const sizeDisplay = getParamDisplay(task, 'size')
   const showSize = task.params.size !== 'auto' || sizeDisplay.isMismatch
 
   const formatDisplay = getParamDisplay(task, 'output_format')
   const showFormat = task.params.output_format !== 'png' || formatDisplay.isMismatch
-  const showTransparentOutput = task.transparentOutput || task.params.transparent_output
+  const aspectRatioDisplay = getParamDisplay(task, 'aspect_ratio')
+  const showAspectRatio = isGeminiTask && task.params.aspect_ratio !== 'auto'
+  const showThinkingLevel = isGeminiTask && task.apiModel === GEMINI_FLASH_IMAGE_MODEL
+  const backgroundDisplay = getParamDisplay(task, 'background')
+  const showBackground = !isGeminiTask && task.params.background !== 'auto'
+  const showTransparentOutput = task.transparentOutput || task.params.transparent_output || task.params.background === 'transparent'
 
   const nDisplay = getParamDisplay(task, 'n')
   const isAgentTask = task.sourceMode === 'agent' || Boolean(task.agentConversationId || task.agentRoundId)
@@ -324,7 +331,7 @@ export default function TaskCard({
   const hasPartialOutputFailure = task.status === 'done' && outputErrorCount > 0
 
   const defaultModelForProvider = task.apiProvider === 'fal' ? DEFAULT_FAL_MODEL : DEFAULT_IMAGES_MODEL
-  const showModel = task.apiModel && task.apiModel !== defaultModelForProvider
+  const showModel = task.apiModel && (isGeminiTask || task.apiModel !== defaultModelForProvider)
   const isInterrupted = task.status === 'error' && task.error === '已停止生成。'
 
   return (
@@ -615,10 +622,28 @@ export default function TaskCard({
                   {sizeDisplay.isMismatch ? <ActualValueBadge value={sizeDisplay.displayValue} className="px-1 rounded-sm" /> : <span className="text-gray-600 dark:text-gray-300">{sizeDisplay.displayValue}</span>}
                 </span>
               )}
+              {showAspectRatio && (
+                <span className="flex flex-shrink-0 items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-white/[0.04]">
+                  <span className="text-gray-400 dark:text-gray-500">比例</span>
+                  {aspectRatioDisplay.isMismatch ? <ActualValueBadge value={aspectRatioDisplay.displayValue} className="rounded-sm px-1" /> : <span className="text-gray-600 dark:text-gray-300">{aspectRatioDisplay.displayValue}</span>}
+                </span>
+              )}
+              {showThinkingLevel && (
+                <span className="flex flex-shrink-0 items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-white/[0.04]">
+                  <span className="text-gray-400 dark:text-gray-500">思考</span>
+                  <span className="text-gray-600 dark:text-gray-300">{task.params.thinking_level}</span>
+                </span>
+              )}
               {showFormat && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.04] text-xs flex-shrink-0">
                   <span className="text-gray-400 dark:text-gray-500">格式</span>
                   {formatDisplay.isMismatch ? <ActualValueBadge value={formatDisplay.displayValue} className="px-1 rounded-sm" /> : <span className="text-gray-600 dark:text-gray-300">{formatDisplay.displayValue}</span>}
+                </span>
+              )}
+              {showBackground && (
+                <span className="flex flex-shrink-0 items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-white/[0.04]">
+                  <span className="text-gray-400 dark:text-gray-500">背景</span>
+                  {backgroundDisplay.isMismatch ? <ActualValueBadge value={backgroundDisplay.displayValue} className="rounded-sm px-1" /> : <span className="text-gray-600 dark:text-gray-300">{backgroundDisplay.displayValue}</span>}
                 </span>
               )}
               {showN && (

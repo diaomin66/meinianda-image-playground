@@ -36,4 +36,10 @@ describe('buildApiUrl', () => {
       'http://api.example.com/v1/responses',
     )
   })
+
+  it('preserves Gemini v1beta base URLs', () => {
+    expect(buildApiUrl('https://api.example.com/v1beta', 'interactions', null, false)).toBe(
+      'https://api.example.com/v1beta/interactions',
+    )
+  })
 })

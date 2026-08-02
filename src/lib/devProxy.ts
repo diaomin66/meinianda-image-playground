@@ -21,9 +21,9 @@ export function normalizeBaseUrl(baseUrl: string): string {
   try {
     const url = new URL(input)
     const pathSegments = url.pathname.split('/').filter(Boolean)
-    const v1Index = pathSegments.indexOf('v1')
-    const normalizedSegments = v1Index >= 0
-      ? pathSegments.slice(0, v1Index + 1)
+    const apiVersionIndex = pathSegments.findIndex((segment) => /^v\d+(?:beta\d*)?$/i.test(segment))
+    const normalizedSegments = apiVersionIndex >= 0
+      ? pathSegments.slice(0, apiVersionIndex + 1)
       : pathSegments.length
         ? [...pathSegments, 'v1']
         : []
@@ -67,7 +67,7 @@ export function buildApiUrl(
     return `${proxyConfig?.prefix ?? DEFAULT_PROXY_PREFIX}/${endpointPath}`
   }
 
-  const apiPath = normalizedBaseUrl.endsWith('/v1')
+  const apiPath = /\/v\d+(?:beta\d*)?$/i.test(normalizedBaseUrl)
     ? endpointPath
     : ['v1', endpointPath].join('/')
 
