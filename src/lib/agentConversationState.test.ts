@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AgentConversation, AgentRound } from '../types'
-import { getAgentBranchLeafId, getAgentRoundPath, getConversationSearchText, normalizeAgentConversations } from './agentConversationState'
+import { getAgentBranchLeafId, getAgentRoundPath, getConversationSearchText, getLatestAgentConversation, normalizeAgentConversations } from './agentConversationState'
 
 function round(id: string, parentRoundId: string | null, index: number): AgentRound {
   return {
@@ -177,5 +177,14 @@ describe('agent conversation state', () => {
     value.messages = [{ id: 'user-round-a', role: 'user', content: 'Message Body', roundId: 'round-a', createdAt: 1 }]
 
     expect(getConversationSearchText(value)).toBe('project alpha\nmessage body\nround prompt')
+  })
+
+  it('selects the most recently updated conversation and breaks ties by creation time', () => {
+    const older = { ...conversation([], null), id: 'older', createdAt: 1, updatedAt: 10 }
+    const newer = { ...conversation([], null), id: 'newer', createdAt: 2, updatedAt: 20 }
+    const newestTie = { ...conversation([], null), id: 'newest-tie', createdAt: 3, updatedAt: 20 }
+
+    expect(getLatestAgentConversation([newer, older, newestTie])?.id).toBe('newest-tie')
+    expect(getLatestAgentConversation([])).toBeNull()
   })
 })

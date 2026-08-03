@@ -657,6 +657,18 @@ describe('agent conversation persistence', () => {
     expect(stored.map((conversation) => conversation.id)).toEqual(['stored-conversation', 'legacy-conversation'])
   })
 
+  it('restores the latest history when the saved active conversation no longer exists', async () => {
+    const olderConversation = agentConversation({ id: 'older-conversation', createdAt: 1, updatedAt: 10 })
+    const latestConversation = agentConversation({ id: 'latest-conversation', createdAt: 2, updatedAt: 20 })
+    useStore.setState({ agentConversations: [], activeAgentConversationId: 'missing-conversation' })
+    await putAgentConversation(olderConversation)
+    await putAgentConversation(latestConversation)
+
+    await initStore()
+
+    expect(useStore.getState().activeAgentConversationId).toBe('latest-conversation')
+  })
+
   it('strips generated image payloads from legacy task raw payloads during startup migration', async () => {
     await putDbTask(task({
       id: 'legacy-task',
@@ -1512,6 +1524,20 @@ describe('agent conversation creation', () => {
     expect(state.agentConversations[state.agentConversations.length - 1]).toMatchObject({ id, createdAt: 3_000, updatedAt: 3_000, messages: [], rounds: [] })
     expect(state.activeAgentConversationId).toBe(id)
     now.mockRestore()
+  })
+
+  it('selects the latest remaining history after deleting the active conversation', () => {
+    const olderConversation = agentConversation({ id: 'older', createdAt: 1_000, updatedAt: 1_000 })
+    const latestConversation = agentConversation({ id: 'latest', createdAt: 2_000, updatedAt: 2_000 })
+    const activeConversation = agentConversation({ id: 'active', createdAt: 3_000, updatedAt: 3_000 })
+    useStore.setState({
+      agentConversations: [olderConversation, latestConversation, activeConversation],
+      activeAgentConversationId: activeConversation.id,
+    })
+
+    useStore.getState().deleteAgentConversation(activeConversation.id)
+
+    expect(useStore.getState().activeAgentConversationId).toBe(latestConversation.id)
   })
 })
 

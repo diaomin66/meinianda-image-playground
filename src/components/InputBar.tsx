@@ -9,6 +9,7 @@ import { DEFAULT_FAL_IMAGE_SIZE, getChangedParams, getOutputImageLimitForSetting
 import { getAtImageQuery, getImageMentionLabel, getPromptIndexFromVisibleIndex, getPromptMentionParts, getSelectedImageMentionLabel, imageMentionMatches, insertImageMentionAtVisibleRange, insertTextMentionAtVisibleRange, isCursorInSelectedImageMention, stripImageMentionMarkers } from '../lib/promptImageMentions'
 import { normalizeCodexCliImageSize, normalizeImageSize } from '../lib/size'
 import {
+  DEFAULT_GPT_IMAGE_SIZE,
   GEMINI_FLASH_ASPECT_RATIOS,
   GEMINI_FLASH_IMAGE_MODEL,
   GEMINI_FLASH_IMAGE_SIZES,
@@ -577,7 +578,12 @@ export default function InputBar() {
           : profile,
       ),
     })
-  }, [appMode, setSettings, settings.profiles])
+    setParams({
+      size: model === GPT_IMAGE_MODEL ? DEFAULT_GPT_IMAGE_SIZE : '1K',
+      aspect_ratio: 'auto',
+      n: DEFAULT_PARAMS.n,
+    })
+  }, [appMode, setParams, setSettings, settings.profiles])
 
   const selectAtImageOption = useCallback((option: AtImageOption) => {
     const el = textareaRef.current

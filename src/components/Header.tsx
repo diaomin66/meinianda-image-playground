@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useStore } from '../store'
 import { useTooltip } from '../hooks/useTooltip'
 import { dismissAllTooltips } from '../lib/tooltipDismiss'
@@ -6,22 +7,98 @@ import ViewportTooltip from './ViewportTooltip'
 import HelpModal from './HelpModal'
 import HistoryModal from './HistoryModal'
 import { useFavoriteCollectionTitle } from './FavoriteCollections'
-import { EditIcon, HelpCircleIcon, HistoryIcon, InstallIcon, SettingsIcon } from './icons'
+import { EditIcon, HelpCircleIcon, HistoryIcon, InstallIcon, MoonIcon, SettingsIcon, SunIcon } from './icons'
+import type { AppMode } from '../types'
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
+const APP_MODES: { mode: AppMode; label: string }[] = [
+  { mode: 'canvas', label: '无限画布' },
+  { mode: 'gallery', label: '画廊' },
+  { mode: 'agent', label: 'Agent' },
+]
+
 function isInstalledPwa() {
   const nav = window.navigator as Navigator & { standalone?: boolean }
   return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
+}
+
+function AppModeNav({
+  appMode,
+  mobile = false,
+  onChange,
+}: {
+  appMode: AppMode
+  mobile?: boolean
+  onChange: (mode: AppMode) => void
+}) {
+  const activeIndex = APP_MODES.findIndex((item) => item.mode === appMode)
+  const activeLabel = APP_MODES[activeIndex]?.label || ''
+
+  return (
+    <div className={mobile
+      ? 'relative mx-2 grid h-[42px] grid-cols-3 items-center gap-1 rounded-xl border border-gray-200 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]'
+      : 'app-mode-nav relative mr-4 hidden h-[42px] w-[238px] self-center grid-cols-3 items-center gap-1 rounded-xl border border-gray-200 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04] sm:grid'}
+    >
+      <motion.span
+        data-app-mode-indicator
+        aria-hidden="true"
+        className="absolute bottom-1 left-1 top-1 flex items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm dark:bg-white/10"
+        style={{ width: 'calc((100% - 1rem) / 3)' }}
+        initial={false}
+        animate={{ x: `calc(${activeIndex * 100}% + ${activeIndex * 0.25}rem)` }}
+        transition={{ type: 'spring', stiffness: 500, damping: 31, mass: 0.74 }}
+      >
+        <AnimatePresence initial={false} mode="popLayout">
+          <motion.span
+            key={appMode}
+            className="whitespace-nowrap"
+            initial={{ opacity: 0, y: 6, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.94 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {activeLabel}
+          </motion.span>
+        </AnimatePresence>
+      </motion.span>
+      {APP_MODES.map((item) => {
+        const active = appMode === item.mode
+        return (
+          <button
+            key={item.mode}
+            type="button"
+            onClick={() => onChange(item.mode)}
+            aria-pressed={active}
+            className={`relative h-8 min-w-0 whitespace-nowrap rounded-lg text-sm transition-colors duration-200 ${mobile ? 'px-1' : 'px-2'} ${
+              active
+                ? 'font-medium text-gray-900 dark:text-white'
+                : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+            }`}
+          >
+            <motion.span
+              className="relative z-10 block whitespace-nowrap"
+              animate={{ opacity: active ? 0 : 1, y: active ? 3 : 0, scale: active ? 0.97 : 1 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 34, mass: 0.68 }}
+            >
+              {item.label}
+            </motion.span>
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function Header() {
   const appMode = useStore((s) => s.appMode)
   const setAppMode = useStore((s) => s.setAppMode)
   const setShowSettings = useStore((s) => s.setShowSettings)
+  const themePreference = useStore((s) => s.settings.theme)
+  const setSettings = useStore((s) => s.setSettings)
   const setConfirmDialog = useStore((s) => s.setConfirmDialog)
   const agentMobileHeaderVisible = useStore((s) => s.agentMobileHeaderVisible)
   const agentConversations = useStore((s) => s.agentConversations)
@@ -36,9 +113,18 @@ export default function Header() {
   const [isPwaInstalled, setIsPwaInstalled] = useState(isInstalledPwa)
   const [hintVisible, setHintVisible] = useState(false)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down'>('up')
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const historyButtonRef = useRef<HTMLButtonElement>(null)
   const createConversation = useStore((s) => s.createAgentConversation)
+  const switchAppMode = (mode: AppMode) => {
+    if (mode === appMode) return
+    setAppMode(mode)
+  }
+
+  useEffect(() => {
+    if (appMode !== 'agent') setShowHistoryModal(false)
+  }, [appMode])
 
   useEffect(() => {
     if (appMode === 'agent') {
@@ -83,7 +169,17 @@ export default function Header() {
 
   const installTooltip = useTooltip()
   const helpTooltip = useTooltip()
+  const themeTooltip = useTooltip()
   const settingsTooltip = useTooltip()
+  const dark = themePreference === 'dark' || (themePreference === 'system' && systemDark)
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const updateSystemTheme = () => setSystemDark(media.matches)
+    updateSystemTheme()
+    media.addEventListener('change', updateSystemTheme)
+    return () => media.removeEventListener('change', updateSystemTheme)
+  }, [])
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -144,10 +240,10 @@ export default function Header() {
 
   return (
     <>
-      <header data-no-drag-select className={`safe-area-top fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-white/[0.08] transition-transform duration-300 ease-in-out ${appMode === 'agent' && !agentMobileHeaderVisible ? '-translate-y-full sm:translate-y-0' : 'translate-y-0'}`}>
-        <div className="safe-area-x safe-header-inner max-w-7xl mx-auto flex items-center justify-between relative">
+      <header data-no-drag-select className={`app-header safe-area-top fixed top-0 left-0 right-0 z-40 overflow-x-clip bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-white/[0.08] transition-transform duration-300 ease-in-out ${appMode === 'canvas' ? 'app-header-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? '-translate-y-full sm:translate-y-0' : 'translate-y-0'}`}>
+        <div className="app-header-inner safe-area-x safe-header-inner max-w-7xl mx-auto flex items-center justify-between relative">
           <div className="flex-1 min-w-0 pr-2 flex items-center gap-2">
-            <h1 className="inline-flex min-w-0 items-start relative mr-2">
+            <h1 className="app-header-brand relative mr-2 inline-flex min-w-0 max-w-[52vw] items-start sm:max-w-none">
               {showFavoriteCollectionTitle ? (
                 <>
                   <span className="min-w-0 truncate text-[17px] font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:hidden" title={favoriteCollectionTitle}>{favoriteCollectionTitle}</span>
@@ -156,7 +252,7 @@ export default function Header() {
                   </span>
                 </>
               ) : (
-                <span className="text-[17px] sm:text-lg font-bold tracking-tight text-gray-800 dark:text-gray-100">
+                <span className="min-w-0 truncate text-[17px] sm:text-lg font-bold tracking-tight text-gray-800 dark:text-gray-100">
                   Meinianda Image Playground
                 </span>
               )}
@@ -211,23 +307,9 @@ export default function Header() {
               </div>
             </div>
           )}
-          <div className="hidden sm:flex items-center gap-1 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-100/70 dark:bg-white/[0.04] p-1 mr-4">
-            <button
-              type="button"
-              onClick={() => setAppMode('gallery')}
-              className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${appMode === 'gallery' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm font-medium' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
-            >
-              画廊
-            </button>
-            <button
-              type="button"
-              onClick={() => setAppMode('agent')}
-              className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${appMode === 'agent' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm font-medium' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
-            >
-              Agent
-            </button>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
+          {appMode === 'canvas' && <div id="canvas-header-slot" className="canvas-header-slot" />}
+          <AppModeNav appMode={appMode} onChange={switchAppMode} />
+          <div className="app-header-actions flex items-center gap-1 shrink-0">
             {!isPwaInstalled && (
               <div
                 className="relative"
@@ -268,6 +350,27 @@ export default function Header() {
             </div>
             <div
               className="relative"
+              {...themeTooltip.handlers}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  dismissAllTooltips()
+                  setSettings({ theme: dark ? 'light' : 'dark' })
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+                aria-label={dark ? '切换到浅色模式' : '切换到深色模式'}
+              >
+                {dark
+                  ? <SunIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  : <MoonIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
+              </button>
+              <ViewportTooltip visible={themeTooltip.visible} className="whitespace-nowrap">
+                {dark ? '切换到浅色模式' : '切换到深色模式'}
+              </ViewportTooltip>
+            </div>
+            <div
+              className="relative"
               {...settingsTooltip.handlers}
             >
               <button
@@ -284,22 +387,7 @@ export default function Header() {
           </div>
         </div>
         <div className={`safe-area-x sm:hidden overflow-hidden transition-all duration-300 ease-in-out ${appMode === 'gallery' && scrollDirection === 'down' ? 'max-h-0 opacity-0 pb-0' : 'max-h-20 opacity-100 pb-2'}`}>
-          <div className="grid grid-cols-2 gap-1 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-100/70 dark:bg-white/[0.04] p-1 mx-2">
-            <button
-              type="button"
-              onClick={() => setAppMode('gallery')}
-              className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${appMode === 'gallery' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm font-medium' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
-            >
-              画廊
-            </button>
-            <button
-              type="button"
-              onClick={() => setAppMode('agent')}
-              className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${appMode === 'agent' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm font-medium' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
-            >
-              Agent
-            </button>
-          </div>
+          <AppModeNav appMode={appMode} mobile onChange={switchAppMode} />
         </div>
       </header>
       
@@ -310,7 +398,7 @@ export default function Header() {
         </div>
       </div>
 
-      <div className={`safe-area-top invisible pointer-events-none transition-all duration-300 ease-in-out ${appMode === 'agent' && !agentMobileHeaderVisible ? 'max-h-0 sm:max-h-[500px] opacity-0 sm:opacity-100 overflow-hidden sm:overflow-visible' : 'max-h-[500px] opacity-100'}`} aria-hidden="true">
+      <div className={`app-header-spacer safe-area-top invisible shrink-0 pointer-events-none transition-all duration-300 ease-in-out ${appMode === 'canvas' ? 'app-header-spacer-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? 'max-h-0 sm:max-h-[500px] opacity-0 sm:opacity-100 overflow-hidden sm:overflow-visible' : 'max-h-[500px] opacity-100'}`} aria-hidden="true">
         <div className="safe-header-inner" />
         <div className={`safe-area-x sm:hidden overflow-hidden transition-all duration-300 ease-in-out ${appMode === 'gallery' && scrollDirection === 'down' ? 'max-h-0 pb-0' : 'max-h-20 pb-2'}`}>
           <div className="p-1">

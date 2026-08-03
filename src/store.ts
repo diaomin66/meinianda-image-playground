@@ -21,7 +21,7 @@ import type {
 import { DEFAULT_AGENT_MAX_TOOL_ROUNDS, DEFAULT_PARAMS } from './types'
 import { DEFAULT_SETTINGS, getActiveApiProfile, getAgentImageApiProfile, getAgentTextApiProfile, getCustomProviderDefinition, mergeImportedSettings, normalizeSettings, validateApiProfile } from './lib/apiProfiles'
 import { lockApiSettings } from './lib/fixedApiProfiles'
-import { GEMINI_MAX_REFERENCE_IMAGES } from './lib/imageModels'
+import { DEFAULT_GPT_IMAGE_SIZE, GEMINI_MAX_REFERENCE_IMAGES } from './lib/imageModels'
 import { dismissAllTooltips } from './lib/tooltipDismiss'
 import { remapImageMentionsForOrder, replaceImageMentionsForApi } from './lib/promptImageMentions'
 import {
@@ -62,7 +62,7 @@ import { cacheImage, cacheThumbnail, clearImageCaches, deleteCachedImage, delete
 import { hasActiveDataOperations } from './lib/dataOperations'
 import { formatExportFileTime } from './lib/exportFileName'
 import { buildExportZip, createExportBlob, getExportImageEstimatedBytes, getExportZipPlan, MAX_EXPORT_ZIP_BYTES, readExportZip, readExportZipFileAsDataUrl, readExportZipManifest } from './lib/exportZip'
-import { deleteAgentRoundFromConversation, getActiveAgentRounds, getAgentRoundPath, normalizeAgentConversations, remapAgentRoundMentionsForPathChange, uniqueIds } from './lib/agentConversationState'
+import { deleteAgentRoundFromConversation, getActiveAgentRounds, getAgentRoundPath, getLatestAgentConversation, normalizeAgentConversations, remapAgentRoundMentionsForPathChange, uniqueIds } from './lib/agentConversationState'
 import { canonicalizeBatchFunctionCallArguments, countResponseToolCalls, createReadyAgentRecoveredToolState, getAgentFunctionOutputCallIds, getAgentRecoveredFailureError, getAgentRecoveredToolCallCount, getPersistableAgentConversations, getPersistableRawResponsePayload, mergeResponseOutputItems, scrubResponseOutputForDeletedAgentTasks, scrubTaskRawResponsePayloadForDeletedTasks } from './lib/agentResponseState'
 import { cleanStaleAgentInputDrafts, clearInputDraftState, isEmptyAgentInputDraft, normalizeAgentInputDrafts, remapAgentInputDraftMentionsForPathChange, restoreAgentInputDraftState, restoreGalleryInputDraftState, saveActiveAgentInputDrafts, saveGalleryInputDraft, syncActiveInputDraft, updateInputDraftImages } from './lib/inputDraftState'
 import { ALL_FAVORITES_COLLECTION_ID, DEFAULT_FAVORITE_COLLECTION_ID, createDefaultFavoriteCollection, deleteFavoriteCollectionState, ensureDefaultFavoriteCollection, getTaskFavoriteCollectionIds, mergeFavoriteCollections, normalizeFavoriteCollectionIds, normalizeFavoriteCollectionName, normalizeFavoriteCollections, normalizeFavoritePatch, normalizeLoadedFavoriteState, resolveDefaultFavoriteCollectionId, sameFavoriteCollectionIds } from './lib/favoriteState'
@@ -233,14 +233,6 @@ function createAgentConversationTitle(prompt: string, fallbackTitle: string) {
 
 function isEmptyAgentConversation(conversation: AgentConversation) {
   return conversation.rounds.length === 0 && conversation.messages.length === 0 && !conversation.activeRoundId
-}
-
-function getLatestAgentConversation(conversations: AgentConversation[]) {
-  return conversations.reduce<AgentConversation | null>((latest, conversation) => {
-    if (!latest) return conversation
-    if (conversation.updatedAt !== latest.updatedAt) return conversation.updatedAt > latest.updatedAt ? conversation : latest
-    return conversation.createdAt > latest.createdAt ? conversation : latest
-  }, null)
 }
 
 export function getPersistedState(state: AppState) {
@@ -482,8 +474,29 @@ export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Mode
-      appMode: 'gallery',
+      appMode: 'canvas',
       setAppMode: (appMode) => {
+        if (appMode === 'canvas') {
+          const state = get()
+          const agentInputDrafts = state.appMode === 'agent'
+            ? saveActiveAgentInputDrafts(state)
+            : state.agentInputDrafts
+          const galleryInputDraft = state.appMode === 'gallery'
+            ? saveGalleryInputDraft(state)
+            : state.galleryInputDraft
+          set({
+            appMode,
+            agentInputDrafts,
+            galleryInputDraft,
+            agentMobileHeaderVisible: true,
+            selectedTaskIds: [],
+            selectedFavoriteCollectionIds: [],
+            agentEditingRoundId: null,
+            ...(state.appMode === 'agent' ? restoreGalleryInputDraftState(galleryInputDraft) : {}),
+          })
+          return
+        }
+
         if (appMode === 'gallery') {
           const state = get()
           const agentInputDrafts = saveActiveAgentInputDrafts(state)
@@ -508,15 +521,19 @@ export const useStore = create<AppState>()(
 
         if (!agentValidationError) {
           const galleryInputDraft = saveGalleryInputDraft(state)
+          const activeAgentConversationId = state.activeAgentConversationId && state.agentConversations.some((conversation) => conversation.id === state.activeAgentConversationId)
+            ? state.activeAgentConversationId
+            : getLatestAgentConversation(state.agentConversations)?.id ?? null
           set((state) => ({
             appMode: 'agent',
+            activeAgentConversationId,
             galleryInputDraft,
             agentMobileHeaderVisible: false,
             agentSidebarCollapsed: true,
             agentAssetPanelCollapsed: true,
             selectedTaskIds: [],
             selectedFavoriteCollectionIds: [],
-            ...restoreAgentInputDraftState(state.agentInputDrafts, state.activeAgentConversationId),
+            ...restoreAgentInputDraftState(state.agentInputDrafts, activeAgentConversationId),
           }))
           return
         }
@@ -693,7 +710,7 @@ export const useStore = create<AppState>()(
       galleryInputDraft: null,
 
       // Params
-      params: { ...DEFAULT_PARAMS },
+      params: { ...DEFAULT_PARAMS, size: DEFAULT_GPT_IMAGE_SIZE },
       setParams: (p) => set((s) => ({ params: { ...s.params, ...p } })),
       reusedTaskApiProfileId: null,
       reusedTaskApiProfileName: null,
@@ -784,11 +801,15 @@ export const useStore = create<AppState>()(
         const agentInputDrafts = { ...state.agentInputDrafts }
         delete agentInputDrafts[id]
         const activeDeleted = state.activeAgentConversationId === id
+        const agentConversations = state.agentConversations.filter((c) => c.id !== id)
+        const activeAgentConversationId = activeDeleted
+          ? getLatestAgentConversation(agentConversations)?.id ?? null
+          : state.activeAgentConversationId
         return {
-          agentConversations: state.agentConversations.filter((c) => c.id !== id),
-          activeAgentConversationId: activeDeleted ? null : state.activeAgentConversationId,
+          agentConversations,
+          activeAgentConversationId,
           agentInputDrafts,
-          ...(activeDeleted ? clearInputDraftState() : {}),
+          ...(activeDeleted ? restoreAgentInputDraftState(agentInputDrafts, activeAgentConversationId) : {}),
         }
       }),
       deleteAgentRound: (conversationId, roundId) => deleteAgentRoundAndTasks(conversationId, roundId),
@@ -947,7 +968,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'gpt-image-playground',
-      version: 2,
+      version: 3,
       migrate: migratePersistedState,
       partialize: getPersistedState,
       merge: mergePersistedState,
@@ -1389,7 +1410,7 @@ export async function initStore() {
   loadedAgentConversations = mergePersistedAgentConversations(loadedAgentConversations, currentAgentConversations)
   const activeAgentConversationId = useStore.getState().activeAgentConversationId && loadedAgentConversations.some((conversation) => conversation.id === useStore.getState().activeAgentConversationId)
     ? useStore.getState().activeAgentConversationId
-    : loadedAgentConversations[0]?.id ?? null
+    : getLatestAgentConversation(loadedAgentConversations)?.id ?? null
   if (loadedAgentConversations.length > 0 || legacyAgentConversations.length > 0) {
     useStore.setState((state) => {
       const agentInputDrafts = cleanStaleAgentInputDrafts(
@@ -4167,7 +4188,7 @@ export async function clearData(options: ClearOptions = { clearConfig: true, cle
   if (options.clearConfig) {
     useStore.setState({ dismissedCodexCliPrompts: [], supportPromptDismissed: false })
     setSettings({ ...DEFAULT_SETTINGS })
-    setParams({ ...DEFAULT_PARAMS })
+    setParams({ ...DEFAULT_PARAMS, size: DEFAULT_GPT_IMAGE_SIZE })
   }
 
   showToast('所选数据已清空', 'success')

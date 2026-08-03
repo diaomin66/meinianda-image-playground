@@ -80,6 +80,53 @@ describe('locked API settings', () => {
     expect(settings.profiles.map((profile) => profile.apiKey)).toEqual(['shared-key', 'shared-key', 'shared-key'])
   })
 
+  it('preserves a nonempty selected Agent model on the fixed Responses profile', () => {
+    const settings = lockApiSettings({
+      profiles: [
+        {
+          id: FIXED_RESPONSES_PROFILE_ID,
+          name: 'Language',
+          provider: 'openai',
+          baseUrl: 'https://example.com/v1',
+          apiKey: 'language-key',
+          model: 'custom-responses-model',
+          timeout: 30,
+          apiMode: 'responses',
+          codexCli: false,
+          apiProxy: false,
+        },
+      ],
+    })
+
+    expect(settings.profiles.find((profile) => profile.id === FIXED_RESPONSES_PROFILE_ID)).toMatchObject({
+      apiKey: 'language-key',
+      model: 'custom-responses-model',
+      baseUrl: FIXED_API_BASE_URL,
+      apiMode: 'responses',
+    })
+  })
+
+  it('falls back to the default Agent model when the fixed Responses model is blank', () => {
+    const settings = lockApiSettings({
+      profiles: [
+        {
+          id: FIXED_RESPONSES_PROFILE_ID,
+          name: 'Language',
+          provider: 'openai',
+          baseUrl: 'https://example.com/v1',
+          apiKey: 'language-key',
+          model: '   ',
+          timeout: 30,
+          apiMode: 'responses',
+          codexCli: false,
+          apiProxy: false,
+        },
+      ],
+    })
+
+    expect(settings.profiles.find((profile) => profile.id === FIXED_RESPONSES_PROFILE_ID)?.model).toBe(DEFAULT_RESPONSES_MODEL)
+  })
+
   it('preserves the selected Gemini model and active gallery profile', () => {
     const settings = lockApiSettings({
       activeProfileId: FIXED_GEMINI_PROFILE_ID,

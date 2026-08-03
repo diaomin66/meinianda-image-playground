@@ -1,0 +1,77 @@
+@media (max-width: 899px) {
+  .infinite-canvas-module .canvas-module-shell .canvas-agent-panel-compact {
+    position: absolute;
+    inset: 4rem env(safe-area-inset-right, 0px) 0 auto;
+    height: auto;
+    max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  }
+
+  .infinite-canvas-module .canvas-module-shell .canvas-agent-panel-compact .canvas-agent-panel-grid {
+    margin: 0.5rem;
+  }
+
+  .infinite-canvas-module .canvas-module-shell .canvas-agent-panel-compact .canvas-agent-panel-content {
+    max-width: calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+@media (max-width: 640px) {
+  .infinite-canvas-module .canvas-workspace-shell .canvas-workspace-side-panel {
+    position: absolute;
+    inset: 4rem auto 0 env(safe-area-inset-left, 0px);
+    height: auto;
+    max-width: calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  }
+
+  .infinite-canvas-module .canvas-workspace-shell .canvas-workspace-side-panel-content {
+    max-width: calc(100vw - 2.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .infinite-canvas-module .canvas-module-shell .canvas-agent-panel {
+    position: absolute;
+    inset: 4rem env(safe-area-inset-right, 0px) 0 auto;
+    height: auto;
+    max-width: calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  }
+
+  .infinite-canvas-module .canvas-module-shell .canvas-agent-panel-content {
+    max-width: calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .infinite-canvas-module .canvas-workspace-shell .canvas-workspace-toolbar {
+    bottom: max(1.25rem, env(safe-area-inset-bottom, 0px)) !important;
+    left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+    right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
+  }
+
+  .infinite-canvas-module .canvas-workspace-shell .canvas-workspace-toolbar-scroll {
+    width: 100%;
+  }
+
+  /* 缩放坞与主工具栏分别占用上下两行，避免窄屏首个工具被遮挡。 */
+  .infinite-canvas-module .canvas-workspace-surface > .absolute.bottom-5.left-5.z-50 {
+    bottom: 5.25rem;
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+  }
+
+  .infinite-canvas-module .canvas-workspace-shell .canvas-workspace-top-bar > div:first-child {
+    gap: 0.75rem;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+    pointer-events: auto;
+    scrollbar-width: none;
+  }
+
+  .infinite-canvas-module .canvas-workspace-shell .canvas-workspace-top-bar > div:first-child::-webkit-scrollbar {
+    display: none;
+  }
+
+  .infinite-canvas-module .canvas-workspace-shell .canvas-workspace-top-bar > div:first-child > * {
+    flex: 0 0 auto;
+  }
+}

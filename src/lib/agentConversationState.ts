@@ -165,6 +165,14 @@ export function getActiveAgentRounds(conversation: AgentConversation): AgentRoun
   return getAgentRoundPath(conversation, activeRoundId ?? null)
 }
 
+export function getLatestAgentConversation(conversations: AgentConversation[]) {
+  return conversations.reduce<AgentConversation | null>((latest, conversation) => {
+    if (!latest) return conversation
+    if (conversation.updatedAt !== latest.updatedAt) return conversation.updatedAt > latest.updatedAt ? conversation : latest
+    return conversation.createdAt > latest.createdAt ? conversation : latest
+  }, null)
+}
+
 function reindexAgentRounds(conversation: AgentConversation): AgentConversation {
   const indexById = new Map<string, number>()
   const seen = new Set<string>()

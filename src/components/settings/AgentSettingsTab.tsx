@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { DEFAULT_AGENT_MAX_TOOL_ROUNDS, type AppSettings } from '../../types'
-import { normalizeAgentMaxToolRounds } from '../../lib/apiProfiles'
+import { DEFAULT_RESPONSES_MODEL, normalizeAgentMaxToolRounds } from '../../lib/apiProfiles'
+import { FIXED_RESPONSES_PROFILE_ID } from '../../lib/fixedApiProfiles'
 
 interface AgentSettingsTabProps {
   draft: AppSettings
@@ -16,11 +18,48 @@ export default function AgentSettingsTab({
   commitSettings,
   commitAgentMaxToolRounds,
 }: AgentSettingsTabProps) {
+  const agentProfile = draft.profiles.find((profile) => profile.id === FIXED_RESPONSES_PROFILE_ID)
+  const agentModel = agentProfile?.model || DEFAULT_RESPONSES_MODEL
+  const [agentModelInput, setAgentModelInput] = useState(agentModel)
+
+  useEffect(() => {
+    setAgentModelInput(agentModel)
+  }, [agentModel])
+
+  const commitAgentModel = () => {
+    const model = agentModelInput.trim() || DEFAULT_RESPONSES_MODEL
+    setAgentModelInput(model)
+    commitSettings({
+      ...draft,
+      profiles: draft.profiles.map((profile) => profile.id === FIXED_RESPONSES_PROFILE_ID ? { ...profile, model } : profile),
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-sm leading-relaxed text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
         Agent 固定使用语言配置调用 Responses API，并使用生图配置调用 Images API。
       </div>
+      <label className="block">
+        <span className="mb-1.5 block text-sm text-gray-600 dark:text-gray-300">Agent 模型 ID</span>
+        <input
+          list="agent-model-presets"
+          value={agentModelInput}
+          onChange={(e) => setAgentModelInput(e.target.value)}
+          onBlur={commitAgentModel}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+          }}
+          placeholder={DEFAULT_RESPONSES_MODEL}
+          className="w-full rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:focus:border-blue-500/50"
+        />
+        <datalist id="agent-model-presets">
+          <option value={DEFAULT_RESPONSES_MODEL} />
+        </datalist>
+        <div data-selectable-text className="mt-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-500">
+          可直接输入服务支持的任意 Responses 模型 ID；默认使用 {DEFAULT_RESPONSES_MODEL}。
+        </div>
+      </label>
       <label className="block">
         <span className="mb-1.5 block text-sm text-gray-600 dark:text-gray-300">最大工具调用轮数</span>
         <input

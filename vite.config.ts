@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import { normalizeDevProxyConfig } from './src/lib/devProxy'
+import { parseChangelog } from './src/infiniteCanvas/lib/release'
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
+const canvasVersion = readFileSync('./src/infiniteCanvas/VERSION', 'utf-8').trim()
+const canvasReleases = parseChangelog(readFileSync('./src/infiniteCanvas/CHANGELOG.md', 'utf-8'))
 
 function loadDevProxyConfig() {
   try {
@@ -23,8 +27,15 @@ export default defineConfig(({ command }) => {
   return {
     plugins: [react()],
     base: './',
+    resolve: {
+      alias: {
+        '@canvas': resolve(__dirname, 'src/infiniteCanvas'),
+      },
+    },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
+      __CANVAS_APP_VERSION__: JSON.stringify(canvasVersion),
+      __CANVAS_APP_RELEASES__: JSON.stringify(canvasReleases),
       __DEV_PROXY_CONFIG__: JSON.stringify(devProxyConfig),
     },
     server: {

@@ -23,6 +23,15 @@ function getProfileApiKey(profiles: ApiProfile[], id: string, mode: ApiMode) {
   return profiles.find((profile) => profile.apiMode === mode)?.apiKey
 }
 
+function getFixedResponsesModel(input: Partial<AppSettings> | unknown) {
+  if (!input || typeof input !== 'object') return DEFAULT_RESPONSES_MODEL
+  const profiles = (input as { profiles?: unknown }).profiles
+  if (!Array.isArray(profiles)) return DEFAULT_RESPONSES_MODEL
+  const profile = profiles.find((item) => item && typeof item === 'object' && (item as { id?: unknown }).id === FIXED_RESPONSES_PROFILE_ID)
+  const model = profile && typeof profile === 'object' ? (profile as { model?: unknown }).model : null
+  return typeof model === 'string' && model.trim() ? model.trim() : DEFAULT_RESPONSES_MODEL
+}
+
 export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSettings {
   const settings = normalizeSettings(input)
   const imageApiKey = getProfileApiKey(settings.profiles, FIXED_IMAGE_PROFILE_ID, 'images') ?? settings.apiKey
@@ -31,6 +40,7 @@ export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSetti
   const geminiModel = existingGeminiProfile && isGeminiImageModel(existingGeminiProfile.model)
     ? existingGeminiProfile.model
     : GEMINI_FLASH_IMAGE_MODEL
+  const responsesModel = getFixedResponsesModel(input)
   const responsesApiKey = getProfileApiKey(settings.profiles, FIXED_RESPONSES_PROFILE_ID, 'responses') ?? imageApiKey
   const activeProfileId = settings.activeProfileId === FIXED_GEMINI_PROFILE_ID
     ? FIXED_GEMINI_PROFILE_ID
@@ -70,7 +80,7 @@ export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSetti
       provider: 'openai',
       baseUrl: FIXED_API_BASE_URL,
       apiKey: responsesApiKey,
-      model: DEFAULT_RESPONSES_MODEL,
+      model: responsesModel,
       timeout: DEFAULT_API_TIMEOUT,
       apiMode: 'responses',
       codexCli: false,

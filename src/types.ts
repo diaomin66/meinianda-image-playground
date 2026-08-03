@@ -1,9 +1,10 @@
 // ===== 设置 =====
 
 export type ApiMode = 'images' | 'responses'
+export type ThemePreference = 'system' | 'light' | 'dark'
 export const REASONING_EFFORT_VALUES = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 export type ReasoningEffort = typeof REASONING_EFFORT_VALUES[number]
-export type AppMode = 'gallery' | 'agent'
+export type AppMode = 'canvas' | 'gallery' | 'agent'
 export type AgentApiConfigMode = 'off' | 'native' | 'hybrid'
 export const ZIP_DOWNLOAD_ROUTE_VALUES = [
   'task-selection',
@@ -87,6 +88,7 @@ export interface ApiProfile {
 }
 
 export interface AppSettings {
+  theme: ThemePreference
   /** 旧版单配置字段：保留用于导入/查询参数兼容，实际请求以 active profile 为准 */
   baseUrl: string
   apiKey: string

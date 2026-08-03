@@ -119,10 +119,11 @@ export function createPersistedState(state: PersistedStateSource, includeLegacyA
   }
 }
 
-export function migratePersistedState(persistedState: unknown, _version?: number): unknown {
+export function migratePersistedState(persistedState: unknown, version = 0): unknown {
   if (!isRecord(persistedState)) return persistedState
   return {
     ...persistedState,
+    ...(version < 3 ? { appMode: 'canvas' } : {}),
     agentConversations: stripPersistedAgentConversations(persistedState.agentConversations),
   }
 }
@@ -144,7 +145,11 @@ export function normalizePersistedState(
   )
     ? persistedState.activeAgentConversationId
     : agentConversations[0]?.id ?? null
-  const appMode = persistedState.appMode === 'agent' ? 'agent' : 'gallery'
+  const appMode = persistedState.appMode === 'canvas'
+    ? 'canvas'
+    : persistedState.appMode === 'agent'
+      ? 'agent'
+      : 'gallery'
   const galleryInputDraft = settings.persistInputOnRestart
     ? normalizeAgentInputDraft(persistedState.galleryInputDraft ?? {
         prompt: persistedState.prompt,

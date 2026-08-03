@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import type { AgentMessage, AgentRound, TaskRecord } from '../types'
 import { editOutputs, regenerateAgentAssistantMessage, removeMultipleTasks, removeTask, reuseConfig, useStore } from '../store'
-import { getActiveAgentRounds, getAgentBranchLeafId, getConversationSearchText, getAgentRoundTaskIds, getAgentSiblingRounds } from '../lib/agentConversationState'
+import { getActiveAgentRounds, getAgentBranchLeafId, getConversationSearchText, getLatestAgentConversation, getAgentRoundTaskIds, getAgentSiblingRounds } from '../lib/agentConversationState'
 import { ensureImageCached, getCachedImage } from '../lib/imageCache'
 import { getPromptMentionParts } from '../lib/promptImageMentions'
 import { copyTextToClipboard, getClipboardFailureMessage } from '../lib/clipboard'
@@ -303,12 +303,8 @@ export default function AgentWorkspace() {
     if (conversations.length === 0) {
       createConversation()
     } else if (!conversation) {
-      const latest = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt)[0]
-      if (latest && latest.messages.length === 0) {
-        setActiveConversationId(latest.id)
-      } else {
-        createConversation()
-      }
+      const latest = getLatestAgentConversation(conversations)
+      if (latest) setActiveConversationId(latest.id)
     }
   }, [appMode, conversationsLoaded, conversations, conversation, createConversation, setActiveConversationId])
 
