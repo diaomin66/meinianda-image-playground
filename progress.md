@@ -758,3 +758,29 @@
 
 - `progress.md`: appended this correction without rewriting prior history.
 - Rollback: remove only this final correction entry, or use `git revert <commit>` after committing.
+
+## 2026-08-03 - Task: Restore infinite-canvas connection rendering
+
+### What was done
+
+- Removed SVG elements from the scoped media `max-width: 100%` reset so the fixed canvas-sized connection SVG retains its intended viewport.
+- Added a regression test that rejects future scoped `max-width` rules targeting infinite-canvas SVG elements.
+- Documented the connection SVG sizing contract.
+- Kept IndexedDB, Zustand persistence, canvas nodes, connection records, and data migrations unchanged, so existing user canvases remain compatible.
+
+### Testing
+
+- `npm test -- --run src/infiniteCanvas/canvasCss.test.ts` passed: 1 test.
+- `npm test` passed: 40 test files and 438 tests.
+- `npm run build` passed.
+- Production-preview Chrome CDP confirmed the existing `diag line` project still contains 2 nodes and 1 saved connection.
+- Production-preview Chrome CDP confirmed the connection SVG is `10000px` by `10000px` with `max-width: none`, and both the saved connection and active dashed drag preview are visible.
+- `git diff --check` passed apart from the existing line-ending warning for `canvas.css`.
+
+### Notes
+
+- `src/infiniteCanvas/canvas.css`: stopped the scoped media reset from collapsing SVG width.
+- `src/infiniteCanvas/canvasCss.test.ts`: added the connection SVG width regression contract.
+- `docs/infinite-canvas-connection-rendering.md`: documented the fixed SVG viewport and persistence boundary.
+- `progress.md`: recorded implementation, verification, and rollback details.
+- Rollback: restore the four listed files to their pre-task state, or run `git revert <commit>` after committing.
