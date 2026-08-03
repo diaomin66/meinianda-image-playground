@@ -1,0 +1,372 @@
+.canvas-app-shell {
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.canvas-app-workspace,
+.canvas-module-host,
+.canvas-module-shell,
+.canvas-module-shell > div {
+  min-width: 0;
+  min-height: 0;
+}
+
+.infinite-canvas-module,
+.infinite-canvas-module > .ant-app {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.infinite-canvas-module > .ant-app {
+  overflow: hidden;
+}
+
+.infinite-canvas-module:not(.infinite-canvas-overlay-root) {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.infinite-canvas-overlay-root {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  pointer-events: none;
+  background: transparent !important;
+}
+
+.infinite-canvas-overlay-root > * {
+  pointer-events: auto;
+}
+
+.infinite-canvas-module .ant-modal-mask,
+.infinite-canvas-module .ant-drawer-mask {
+  background: rgba(24, 24, 27, 0.2) !important;
+  backdrop-filter: blur(8px);
+}
+
+.infinite-canvas-module.dark .ant-modal-mask,
+.infinite-canvas-module.dark .ant-drawer-mask {
+  background: rgba(0, 0, 0, 0.48) !important;
+}
+
+.infinite-canvas-module .ant-modal .ant-modal-container,
+.infinite-canvas-module .ant-modal .ant-modal-content,
+.infinite-canvas-module .ant-popover .ant-popover-inner,
+.infinite-canvas-module .ant-dropdown .ant-dropdown-menu,
+.infinite-canvas-module .ant-select-dropdown,
+.infinite-canvas-module .ant-drawer .ant-drawer-content {
+  border: 1px solid rgba(24, 24, 27, 0.1) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(20px);
+}
+
+.infinite-canvas-module .ant-modal .ant-modal-container,
+.infinite-canvas-module .ant-modal .ant-modal-content {
+  border-radius: 24px !important;
+}
+
+.infinite-canvas-module .ant-popover .ant-popover-inner,
+.infinite-canvas-module .ant-dropdown .ant-dropdown-menu,
+.infinite-canvas-module .ant-select-dropdown {
+  border-radius: 16px !important;
+}
+
+.infinite-canvas-module .ant-drawer .ant-drawer-content {
+  border-radius: 20px 0 0 20px;
+}
+
+.infinite-canvas-module .ant-drawer.ant-drawer-left .ant-drawer-content {
+  border-radius: 0 20px 20px 0;
+}
+
+.infinite-canvas-module.dark .ant-modal .ant-modal-container,
+.infinite-canvas-module.dark .ant-modal .ant-modal-content,
+.infinite-canvas-module.dark .ant-popover .ant-popover-inner,
+.infinite-canvas-module.dark .ant-dropdown .ant-dropdown-menu,
+.infinite-canvas-module.dark .ant-select-dropdown,
+.infinite-canvas-module.dark .ant-drawer .ant-drawer-content {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(24, 24, 27, 0.92) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.infinite-canvas-module .ant-modal .ant-modal-header,
+.infinite-canvas-module .ant-modal .ant-modal-footer,
+.infinite-canvas-module .ant-drawer .ant-drawer-header,
+.infinite-canvas-module .ant-drawer .ant-drawer-footer,
+.infinite-canvas-module .ant-popover .ant-popover-title {
+  border-color: rgba(24, 24, 27, 0.06) !important;
+  background: transparent !important;
+}
+
+.infinite-canvas-module.dark .ant-modal .ant-modal-header,
+.infinite-canvas-module.dark .ant-modal .ant-modal-footer,
+.infinite-canvas-module.dark .ant-drawer .ant-drawer-header,
+.infinite-canvas-module.dark .ant-drawer .ant-drawer-footer,
+.infinite-canvas-module.dark .ant-popover .ant-popover-title {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.infinite-canvas-module .ant-input,
+.infinite-canvas-module .ant-input-affix-wrapper,
+.infinite-canvas-module .ant-input-number,
+.infinite-canvas-module .ant-select .ant-select-selector,
+.infinite-canvas-module .ant-picker,
+.infinite-canvas-module .ant-segmented {
+  border-color: rgba(24, 24, 27, 0.1) !important;
+  background: rgba(24, 24, 27, 0.045) !important;
+  box-shadow: none !important;
+}
+
+.infinite-canvas-module .ant-input:hover,
+.infinite-canvas-module .ant-input-affix-wrapper:hover,
+.infinite-canvas-module .ant-input-number:hover,
+.infinite-canvas-module .ant-select:hover .ant-select-selector,
+.infinite-canvas-module .ant-picker:hover {
+  border-color: rgba(24, 24, 27, 0.16) !important;
+  background: rgba(24, 24, 27, 0.075) !important;
+}
+
+.infinite-canvas-module .ant-input:focus,
+.infinite-canvas-module .ant-input-affix-wrapper-focused,
+.infinite-canvas-module .ant-input-number-focused,
+.infinite-canvas-module .ant-select-focused .ant-select-selector,
+.infinite-canvas-module .ant-picker-focused {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
+}
+
+.infinite-canvas-module.dark .ant-input,
+.infinite-canvas-module.dark .ant-input-affix-wrapper,
+.infinite-canvas-module.dark .ant-input-number,
+.infinite-canvas-module.dark .ant-select .ant-select-selector,
+.infinite-canvas-module.dark .ant-picker,
+.infinite-canvas-module.dark .ant-segmented {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+}
+
+.infinite-canvas-module.dark .ant-input:hover,
+.infinite-canvas-module.dark .ant-input-affix-wrapper:hover,
+.infinite-canvas-module.dark .ant-input-number:hover,
+.infinite-canvas-module.dark .ant-select:hover .ant-select-selector,
+.infinite-canvas-module.dark .ant-picker:hover {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.infinite-canvas-module.dark .ant-input:focus,
+.infinite-canvas-module.dark .ant-input-affix-wrapper-focused,
+.infinite-canvas-module.dark .ant-input-number-focused,
+.infinite-canvas-module.dark .ant-select-focused .ant-select-selector,
+.infinite-canvas-module.dark .ant-picker-focused {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.infinite-canvas-module .ant-btn-default {
+  border-color: rgba(24, 24, 27, 0.1) !important;
+  background: transparent !important;
+  color: #71717a !important;
+}
+
+.infinite-canvas-module .ant-btn-default:not(:disabled):hover {
+  border-color: rgba(24, 24, 27, 0.1) !important;
+  background: rgba(24, 24, 27, 0.045) !important;
+  color: #18181b !important;
+}
+
+.infinite-canvas-module.dark .ant-btn-default {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #a1a1aa !important;
+}
+
+.infinite-canvas-module.dark .ant-btn-default:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  color: #fafafa !important;
+}
+
+.infinite-canvas-module .ant-dropdown-menu-item,
+.infinite-canvas-module .ant-dropdown-menu-submenu-title,
+.infinite-canvas-module .ant-select-item-option,
+.infinite-canvas-module .ant-menu-item,
+.infinite-canvas-module .ant-menu-submenu-title {
+  border-radius: 10px !important;
+}
+
+.infinite-canvas-module .ant-dropdown-menu-item:hover,
+.infinite-canvas-module .ant-dropdown-menu-submenu-title:hover,
+.infinite-canvas-module .ant-select-item-option-active,
+.infinite-canvas-module .ant-menu-item:hover,
+.infinite-canvas-module .ant-menu-submenu-title:hover {
+  background: rgba(24, 24, 27, 0.045) !important;
+}
+
+.infinite-canvas-module .ant-select-item-option-selected,
+.infinite-canvas-module .ant-menu-item-selected {
+  background: rgba(37, 99, 235, 0.1) !important;
+}
+
+.infinite-canvas-module.dark .ant-dropdown-menu-item:hover,
+.infinite-canvas-module.dark .ant-dropdown-menu-submenu-title:hover,
+.infinite-canvas-module.dark .ant-select-item-option-active,
+.infinite-canvas-module.dark .ant-menu-item:hover,
+.infinite-canvas-module.dark .ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.045) !important;
+}
+
+.infinite-canvas-module.dark .ant-select-item-option-selected,
+.infinite-canvas-module.dark .ant-menu-item-selected {
+  background: rgba(59, 130, 246, 0.16) !important;
+}
+
+.infinite-canvas-module .ant-tooltip .ant-tooltip-inner {
+  border: 1px solid rgba(24, 24, 27, 0.08);
+  border-radius: 10px;
+  background: rgba(39, 39, 42, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.infinite-canvas-module.dark .ant-tooltip .ant-tooltip-inner {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(9, 9, 11, 0.96);
+}
+
+.infinite-canvas-module .ant-message-notice-content,
+.infinite-canvas-module .ant-notification-notice {
+  border: 1px solid rgba(24, 24, 27, 0.1) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(20px);
+}
+
+.infinite-canvas-module.dark .ant-message-notice-content,
+.infinite-canvas-module.dark .ant-notification-notice {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(24, 24, 27, 0.92) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.infinite-canvas-module .ant-segmented-item-selected {
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 1px 3px rgba(24, 24, 27, 0.1) !important;
+}
+
+.infinite-canvas-module.dark .ant-segmented-item-selected {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.bg-stone-50, .bg-stone-100) {
+  background-color: #fafafa !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.bg-stone-200, .bg-stone-300) {
+  background-color: #f4f4f5 !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.bg-stone-400, .bg-stone-500, .bg-stone-600, .bg-stone-700, .bg-stone-800, .bg-stone-900, .bg-stone-950) {
+  background-color: #e4e4e7 !important;
+}
+
+.infinite-canvas-module.dark :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.bg-stone-50, .bg-stone-100, .bg-stone-200, .bg-stone-300, .bg-stone-400, .bg-stone-500, .bg-stone-600, .bg-stone-700, .bg-stone-800, .bg-stone-900, .bg-stone-950) {
+  background-color: rgba(255, 255, 255, 0.045) !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) .text-stone-50,
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) .text-stone-100,
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) .text-stone-200 {
+  color: #f9fafb !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) .text-stone-300,
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) .text-stone-400 {
+  color: #a1a1aa !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) .text-stone-500,
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) .text-stone-600 {
+  color: #71717a !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.text-stone-700, .text-stone-800, .text-stone-900, .text-stone-950) {
+  color: #18181b !important;
+}
+
+.infinite-canvas-module.dark :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.text-stone-50, .text-stone-100, .text-stone-200, .text-stone-300) {
+  color: #fafafa !important;
+}
+
+.infinite-canvas-module.dark :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.text-stone-400, .text-stone-500, .text-stone-600) {
+  color: #a1a1aa !important;
+}
+
+.infinite-canvas-module.dark :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.text-stone-700, .text-stone-800, .text-stone-900, .text-stone-950) {
+  color: #fafafa !important;
+}
+
+.infinite-canvas-module :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.border-stone-100, .border-stone-200, .border-stone-300, .border-stone-400, .border-stone-500, .border-stone-600, .border-stone-700, .border-stone-800, .border-stone-900, .border-stone-950) {
+  border-color: rgba(24, 24, 27, 0.1) !important;
+}
+
+.infinite-canvas-module.dark :is(.ant-modal, .ant-drawer, .ant-popover, .ant-dropdown, .ant-select-dropdown) :is(.border-stone-100, .border-stone-200, .border-stone-300, .border-stone-400, .border-stone-500, .border-stone-600, .border-stone-700, .border-stone-800, .border-stone-900, .border-stone-950) {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 桌面端通过真实 Header 插槽承载画布顶栏，不再依赖固定像素定位。 */
+@media (min-width: 1180px) {
+  .canvas-app-shell .canvas-app-workspace {
+    margin-top: -3.5rem;
+  }
+
+  .canvas-app-shell .infinite-canvas-module:not(.infinite-canvas-overlay-root) {
+    z-index: auto;
+    isolation: auto;
+  }
+
+  .canvas-app-shell .app-header-canvas .app-header-inner {
+    max-width: none;
+  }
+
+  .canvas-app-shell .app-header-canvas .app-header-inner > .flex-1 {
+    flex: 0 1 clamp(12rem, 19vw, 18rem);
+    max-width: clamp(12rem, 19vw, 18rem);
+    padding-right: 0;
+  }
+
+  .canvas-app-shell .app-header-canvas .app-header-brand {
+    max-width: none;
+    margin-right: 0.5rem;
+  }
+
+  .canvas-app-shell .canvas-header-slot {
+    display: flex;
+    min-width: 0;
+    height: 3.5rem;
+    flex: 1 1 auto;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .canvas-app-shell .canvas-header-topbar {
+    min-width: 0;
+  }
+
+  .canvas-app-shell .canvas-workspace-side-panel,
+  .canvas-app-shell .canvas-agent-panel {
+    margin-top: 3.5rem;
+    height: calc(100% - 3.5rem);
+  }
+}

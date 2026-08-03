@@ -540,6 +540,7 @@ export function normalizeSettings(input: Partial<AppSettings> | unknown): AppSet
     : active.id
 
   return {
+    theme: record.theme === 'light' || record.theme === 'dark' ? record.theme : 'system',
     baseUrl: active.baseUrl,
     apiKey: active.apiKey,
     model: active.model,
@@ -852,6 +853,7 @@ export function mergeImportedSettings(currentSettings: Partial<AppSettings> | un
 }
 
 export const DEFAULT_SETTINGS: AppSettings = normalizeSettings({
+  theme: 'system',
   baseUrl: DEFAULT_BASE_URL,
   apiKey: DEFAULT_API_URL_PATCH?.apiKey ?? '',
   model: DEFAULT_API_URL_PATCH?.model ?? DEFAULT_IMAGES_MODEL,

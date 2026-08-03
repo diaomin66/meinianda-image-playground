@@ -126,6 +126,7 @@ export default function HistoryModal({ onClose, ignoreOutsideClickRef }: History
   const handleSelect = (id: string) => {
     if (editingId) return
     setAppMode('agent')
+    if (useStore.getState().appMode !== 'agent') return
     setActiveConversationId(id)
     onClose()
   }

@@ -1,0 +1,405 @@
+@config '../../tailwind.canvas.config.js';
+
+@tailwind components;
+@tailwind utilities;
+
+.infinite-canvas-module {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 10%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 221 83% 53%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 10% 10%;
+  --accent: 240 5% 96%;
+  --card: 0 0% 100%;
+  --popover: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-ui-sans);
+  line-height: 1.5;
+  tab-size: 4;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.infinite-canvas-module.dark {
+  --background: 240 10% 4%;
+  --foreground: 0 0% 98%;
+  --muted: 240 4% 16%;
+  --muted-foreground: 240 5% 65%;
+  --border: 240 4% 22%;
+  --input: 240 4% 22%;
+  --ring: 217 91% 60%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 4% 16%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 240 4% 16%;
+  --card: 240 6% 8%;
+  --popover: 240 6% 8%;
+  --destructive: 0 72% 51%;
+}
+
+.infinite-canvas-module,
+.infinite-canvas-module *,
+.infinite-canvas-module::before,
+.infinite-canvas-module::after,
+.infinite-canvas-module *::before,
+.infinite-canvas-module *::after {
+  box-sizing: border-box;
+  border-color: hsl(var(--border));
+}
+
+.infinite-canvas-module h1,
+.infinite-canvas-module h2,
+.infinite-canvas-module h3,
+.infinite-canvas-module h4,
+.infinite-canvas-module h5,
+.infinite-canvas-module h6,
+.infinite-canvas-module p,
+.infinite-canvas-module figure,
+.infinite-canvas-module blockquote,
+.infinite-canvas-module dl,
+.infinite-canvas-module dd {
+  margin: 0;
+}
+
+.infinite-canvas-module h1,
+.infinite-canvas-module h2,
+.infinite-canvas-module h3,
+.infinite-canvas-module h4,
+.infinite-canvas-module h5,
+.infinite-canvas-module h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.infinite-canvas-module ol,
+.infinite-canvas-module ul,
+.infinite-canvas-module menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.infinite-canvas-module a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.infinite-canvas-module button,
+.infinite-canvas-module input,
+.infinite-canvas-module select,
+.infinite-canvas-module textarea {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.infinite-canvas-module button,
+.infinite-canvas-module input[type='button'],
+.infinite-canvas-module input[type='reset'],
+.infinite-canvas-module input[type='submit'] {
+  appearance: button;
+}
+
+.infinite-canvas-module textarea {
+  resize: none;
+}
+
+.infinite-canvas-module img,
+.infinite-canvas-module svg,
+.infinite-canvas-module video,
+.infinite-canvas-module canvas,
+.infinite-canvas-module audio {
+  display: block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.infinite-canvas-module img,
+.infinite-canvas-module video {
+  height: auto;
+}
+
+.infinite-canvas-module [hidden] {
+  display: none !important;
+}
+
+.infinite-canvas-module .hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.infinite-canvas-module .hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.infinite-canvas-module .thin-scrollbar {
+  scrollbar-color: rgb(161 161 170 / 45%) transparent;
+  scrollbar-width: thin;
+}
+
+.infinite-canvas-module .thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.infinite-canvas-module .thin-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(161 161 170 / 45%);
+}
+
+.infinite-canvas-module .hover-scrollbar {
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+
+.infinite-canvas-module .hover-scrollbar:hover {
+  scrollbar-color: rgb(161 161 170 / 50%) transparent;
+}
+
+.infinite-canvas-module .hover-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.infinite-canvas-module .hover-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.infinite-canvas-module .hover-scrollbar:hover::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgb(161 161 170 / 12%);
+}
+
+.infinite-canvas-module .hover-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgb(161 161 170 / 50%);
+}
+
+.infinite-canvas-module .prompt-filter-tag.ant-tag-checkable {
+  margin: 0;
+  padding: 5px 10px;
+  color: #52525b;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.infinite-canvas-module .prompt-filter-tag.ant-tag-checkable:hover {
+  background: rgb(24 24 27 / 6%);
+  color: #18181b;
+}
+
+.infinite-canvas-module .prompt-filter-tag.ant-tag-checkable.is-active,
+.infinite-canvas-module .prompt-filter-tag.ant-tag-checkable-checked {
+  border-color: #18181b;
+  background: #18181b;
+  color: #fff;
+  font-weight: 600;
+}
+
+.infinite-canvas-module.dark .prompt-filter-tag.ant-tag-checkable {
+  color: #e4e4e7;
+}
+
+.infinite-canvas-module.dark .prompt-filter-tag.ant-tag-checkable:hover {
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+}
+
+.infinite-canvas-module.dark .prompt-filter-tag.ant-tag-checkable.is-active,
+.infinite-canvas-module.dark .prompt-filter-tag.ant-tag-checkable-checked {
+  border-color: rgb(255 255 255 / 88%);
+  background: rgb(250 250 250 / 96%);
+  color: #18181b !important;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 18%), 0 6px 18px rgb(0 0 0 / 22%);
+}
+
+.infinite-canvas-module .canvas-control-select.ant-select .ant-select-selector,
+.infinite-canvas-module .canvas-control-number.ant-input-number {
+  border-color: rgb(113 113 122 / 32%) !important;
+  box-shadow: none !important;
+}
+
+.infinite-canvas-module .canvas-compact-control.canvas-control-select.ant-select,
+.infinite-canvas-module .canvas-compact-control.canvas-control-select.ant-select .ant-select-selector,
+.infinite-canvas-module .canvas-compact-control.canvas-control-number.ant-input-number {
+  height: 100% !important;
+}
+
+.infinite-canvas-module .canvas-compact-control.canvas-control-select.ant-select .ant-select-selection-item,
+.infinite-canvas-module .canvas-compact-control.canvas-control-select.ant-select .ant-select-selection-placeholder {
+  display: flex;
+  align-items: center;
+}
+
+.infinite-canvas-module .canvas-compact-control.canvas-control-select.ant-select .ant-select-selection-item,
+.infinite-canvas-module .canvas-compact-control.canvas-control-select.ant-select .ant-select-selection-placeholder,
+.infinite-canvas-module .canvas-compact-control.canvas-control-select.ant-select .ant-select-selection-search-input,
+.infinite-canvas-module .canvas-compact-control.canvas-control-number.ant-input-number .ant-input-number-input {
+  height: 100% !important;
+  line-height: 1 !important;
+}
+
+.infinite-canvas-module .canvas-composer-icon.ant-btn {
+  flex: 0 0 32px;
+  width: 32px;
+}
+
+.infinite-canvas-module .canvas-composer-tools {
+  container-type: inline-size;
+}
+
+.infinite-canvas-module .canvas-composer-mode-button {
+  width: 32px;
+}
+
+.infinite-canvas-module .canvas-composer-tools .canvas-composer-mode-button span,
+.infinite-canvas-module .canvas-composer-tools .canvas-model-picker-text,
+.infinite-canvas-module .canvas-composer-tools .canvas-select-chevron,
+.infinite-canvas-module .canvas-composer-tools .canvas-composer-icon.ant-btn > span:not(.ant-btn-icon) {
+  display: none;
+}
+
+.infinite-canvas-module .canvas-composer-tools .canvas-composer-model-picker {
+  display: flex;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  gap: 0;
+  padding-inline: 0;
+}
+
+@container (min-width: 440px) {
+  .infinite-canvas-module .canvas-composer-mode-button {
+    width: auto;
+    padding-inline: 8px;
+  }
+
+  .infinite-canvas-module .canvas-composer-tools .canvas-composer-mode-button span {
+    display: inline;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .infinite-canvas-module .canvas-composer-icon.ant-btn {
+    flex: 0 1 auto;
+    width: auto !important;
+    max-width: 170px;
+  }
+
+  .infinite-canvas-module .canvas-composer-tools .canvas-composer-icon.ant-btn > span:not(.ant-btn-icon) {
+    display: inline-flex;
+    min-width: 0;
+  }
+
+  .infinite-canvas-module .canvas-composer-tools .canvas-composer-model-picker {
+    justify-content: flex-start;
+    width: auto;
+    min-width: 9rem;
+    gap: 0.5rem;
+    padding-inline: 0.75rem;
+  }
+
+  .infinite-canvas-module .canvas-composer-tools .canvas-model-picker-text,
+  .infinite-canvas-module .canvas-composer-tools .canvas-select-chevron {
+    display: inline;
+  }
+}
+
+.infinite-canvas-module .canvas-control-select.ant-select-focused .ant-select-selector,
+.infinite-canvas-module .canvas-control-number.ant-input-number-focused {
+  border-color: #a1a1aa !important;
+}
+
+.infinite-canvas-module.dark .canvas-control-select.ant-select .ant-select-selector,
+.infinite-canvas-module.dark .canvas-control-number.ant-input-number {
+  border-color: rgb(228 228 231 / 20%) !important;
+}
+
+.infinite-canvas-module.dark .canvas-control-select.ant-select-focused .ant-select-selector,
+.infinite-canvas-module.dark .canvas-control-number.ant-input-number-focused {
+  border-color: #71717a !important;
+}
+
+.infinite-canvas-module .canvas-image-settings-popover .ant-popover-inner {
+  padding: 18px;
+  border-radius: 18px;
+  box-shadow: 0 18px 54px rgb(24 24 27 / 16%);
+}
+
+.infinite-canvas-module .canvas-image-settings-popover .ant-popover-inner-content {
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+.infinite-canvas-module .canvas-image-settings-popover .ant-segmented {
+  padding: 3px;
+  border-radius: 999px;
+}
+
+.infinite-canvas-module .canvas-image-settings-popover .ant-segmented-item {
+  border-radius: 999px;
+}
+
+.infinite-canvas-module.dark .canvas-image-settings-popover .ant-popover-inner {
+  box-shadow: 0 18px 54px rgb(0 0 0 / 45%);
+}
+
+.infinite-canvas-module .canvas-node-info-modal .ant-modal-header {
+  padding-right: 0;
+}
+
+.infinite-canvas-module .canvas-node-info-modal .ant-modal-title {
+  line-height: 1;
+}
+
+.infinite-canvas-module .canvas-node-info-modal .ant-modal-close {
+  top: 21px;
+}
+
+@keyframes canvas-batch-child-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--batch-from-x), var(--batch-from-y)) rotate(var(--batch-from-rotate)) scale(0.72);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(-1deg) scale(1.015);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+}
+
+@keyframes canvas-batch-child-out {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(var(--batch-from-x), var(--batch-from-y)) rotate(var(--batch-from-rotate)) scale(0.72);
+  }
+}

@@ -1,6 +1,7 @@
 import { DEFAULT_PARAMS, type AppSettings, type TaskParams } from '../types'
 import { getActiveApiProfile } from './apiProfiles'
 import {
+  DEFAULT_GPT_IMAGE_SIZE,
   GEMINI_FLASH_ASPECT_RATIOS,
   GEMINI_FLASH_IMAGE_MODEL,
   GEMINI_FLASH_IMAGE_SIZES,
@@ -28,9 +29,12 @@ export function normalizeParamsForSettings(
 ): TaskParams {
   const activeProfile = getActiveApiProfile(settings)
   const outputImageLimit = getOutputImageLimitForSettings(settings)
+  const normalizedSize = normalizeImageSize(params.size)
   const nextParams: TaskParams = {
     ...params,
-    size: normalizeImageSize(params.size) || DEFAULT_PARAMS.size,
+    size: activeProfile.provider === 'openai' && normalizedSize !== 'auto' && !/^\d+x\d+$/.test(normalizedSize)
+      ? DEFAULT_GPT_IMAGE_SIZE
+      : normalizedSize || DEFAULT_PARAMS.size,
     n: Math.min(outputImageLimit, Math.max(1, params.n || DEFAULT_PARAMS.n)),
   }
 

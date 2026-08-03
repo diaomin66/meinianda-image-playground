@@ -1,4 +1,5 @@
 export const GPT_IMAGE_MODEL = 'gpt-image-2'
+export const DEFAULT_GPT_IMAGE_SIZE = '1024x1024'
 export const GEMINI_FLASH_IMAGE_MODEL = 'gemini-3.1-flash-image'
 export const GEMINI_PRO_IMAGE_MODEL = 'gemini-3-pro-image'
 
