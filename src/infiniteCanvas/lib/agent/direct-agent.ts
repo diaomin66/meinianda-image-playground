@@ -226,7 +226,7 @@ async function requestResponse({
 function shouldUseCompatibilityContinuation(error: unknown) {
   const message = error instanceof Error ? error.message : ''
   return /No tool call found for function call output/i.test(message) ||
-    /previous[_ ]response[_ ]id.*(?:unsupported|not supported|invalid|unknown)/i.test(message)
+    /previous[_ ]response[_ ]id.*(?:unsupported|not supported|only supported|invalid|unknown)/i.test(message)
 }
 
 function buildInstructions(snapshot: CanvasAgentSnapshot | null) {

@@ -57,6 +57,7 @@ npm run preview -- --host 127.0.0.1 --port 4173
 ## Canvas Agent skill 与工具契约
 
 - `src/infiniteCanvas/lib/agent/canvas-skill.md` 保存并注入原项目的 Canvas skill；直连 Responses Agent 每轮都能看到该工作流，而不是只看到一个泛化的底层操作工具。
+- Canvas Agent 优先使用 `previous_response_id` 续接同一轮工具调用；如果兼容服务提示该字段不受支持或仅支持 Responses WebSocket v2，则自动改为成对重放 `function_call` 与 `function_call_output`，不向用户暴露协议兼容错误。
 - 直连 Agent 暴露与该 skill 对齐的 `canvas_get_*`、`canvas_create_*`、`canvas_generate_*`、更新、移动、连接、选择、视口和 `canvas_apply_ops` 工具，共覆盖当前“我的画布”模块支持的画布操作。
 - 用户要求生图时优先调用 `canvas_generate_image`。该工具沿用原项目流程创建提示词节点、图片配置节点和连线，随后对配置节点执行 `run_generation`；`add_node` 只创建节点，不能代表生成成功。
 - 如果模型在明确的生图请求中仍只返回 `add_node`，工具层会将其作为可修正错误回传，要求模型改用 `canvas_generate_image` 或补充指向真实节点的 `run_generation`。

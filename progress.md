@@ -784,3 +784,27 @@
 - `docs/infinite-canvas-connection-rendering.md`: documented the fixed SVG viewport and persistence boundary.
 - `progress.md`: recorded implementation, verification, and rollback details.
 - Rollback: restore the four listed files to their pre-task state, or run `git revert <commit>` after committing.
+
+## 2026-08-14 - Task: Fix Canvas Agent Responses continuation compatibility
+
+### What was done
+
+- Reproduced the Canvas Agent failure with the exact service error `previous_response_id is only supported on Responses WebSocket v2`.
+- Extended the existing Responses compatibility fallback so this error switches the current tool loop to paired `function_call` and `function_call_output` replay without `previous_response_id`.
+- Kept the normal `previous_response_id` continuation path unchanged for services that support it.
+- Documented the Canvas Agent continuation fallback behavior.
+
+### Testing
+
+- Before the fix, `npm test -- --run src/infiniteCanvas/lib/agent/direct-agent.test.ts` failed only for the exact WebSocket v2 error and reproduced the user-visible rejection.
+- After the fix, the targeted test passed: 1 test file and 8 tests.
+- `npm test` passed: 40 test files and 439 tests.
+- `npm run build` passed; only the existing dynamic/static import and large-chunk warnings remain.
+
+### Notes
+
+- `src/infiniteCanvas/lib/agent/direct-agent.ts`: recognizes the service's WebSocket v2-only `previous_response_id` error and activates the existing replay fallback.
+- `src/infiniteCanvas/lib/agent/direct-agent.test.ts`: covers the exact error text and verifies the retry omits `previous_response_id` while replaying the paired tool call and output.
+- `docs/infinite-canvas-integration.md`: documents continuation compatibility behavior.
+- `progress.md`: records the diagnosis, implementation, verification, changed files, and rollback point.
+- Rollback: restore these four files to their pre-task state, or run `git revert <commit>` after committing.

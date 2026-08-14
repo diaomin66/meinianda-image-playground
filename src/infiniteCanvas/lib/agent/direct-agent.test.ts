@@ -35,7 +35,10 @@ describe('direct canvas agent', () => {
     vi.unstubAllGlobals()
   })
 
-  it('falls back to paired function-call input when previous_response_id is not supported', async () => {
+  it.each([
+    'No tool call found for function call output with call_id call-1',
+    'previous_response_id is only supported on Responses WebSocket v2',
+  ])('falls back to paired function-call input after compatibility error: %s', async (errorMessage) => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({
         id: 'resp-1',
@@ -47,7 +50,7 @@ describe('direct canvas agent', () => {
         }],
       }))
       .mockResolvedValueOnce(response({
-        error: { message: 'No tool call found for function call output with call_id call-1' },
+        error: { message: errorMessage },
       }, 400))
       .mockResolvedValueOnce(response({
         id: 'resp-2',
