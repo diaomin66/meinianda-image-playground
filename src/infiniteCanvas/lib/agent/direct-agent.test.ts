@@ -35,7 +35,10 @@ describe('direct canvas agent', () => {
     vi.unstubAllGlobals()
   })
 
-  it('falls back to paired function-call input when previous_response_id is not supported', async () => {
+  it.each([
+    'No tool call found for function call output with call_id call-1',
+    'previous_response_id is only supported on Responses WebSocket v2',
+  ])('falls back to paired function-call input after compatibility error: %s', async (errorMessage) => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({
         id: 'resp-1',
@@ -47,7 +50,7 @@ describe('direct canvas agent', () => {
         }],
       }))
       .mockResolvedValueOnce(response({
-        error: { message: 'No tool call found for function call output with call_id call-1' },
+        error: { message: errorMessage },
       }, 400))
       .mockResolvedValueOnce(response({
         id: 'resp-2',
@@ -81,6 +84,26 @@ describe('direct canvas agent', () => {
     await expect(runDirectCanvasAgentTurn(input)).resolves.toBe('The canvas has three nodes.')
     expect(input.applyOps).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends the selected model and reasoning effort', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({
+      id: 'resp-1',
+      output: [{ type: 'message', content: [{ type: 'output_text', text: 'Done.' }] }],
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const input = request()
+
+    await expect(runDirectCanvasAgentTurn({
+      ...input,
+      model: 'gpt-5.6-luna',
+      reasoningEffort: 'max',
+    })).resolves.toBe('Done.')
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject({
+      model: 'gpt-5.6-luna',
+      reasoning: { effort: 'max' },
+    })
   })
 
   it('returns a structured tool error so the model can recover from an invalid call', async () => {

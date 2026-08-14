@@ -57,6 +57,7 @@ npm run preview -- --host 127.0.0.1 --port 4173
 ## Canvas Agent skill 与工具契约
 
 - `src/infiniteCanvas/lib/agent/canvas-skill.md` 保存并注入原项目的 Canvas skill；直连 Responses Agent 每轮都能看到该工作流，而不是只看到一个泛化的底层操作工具。
+- Canvas Agent 优先使用 `previous_response_id` 续接同一轮工具调用；如果兼容服务提示该字段不受支持或仅支持 Responses WebSocket v2，则自动改为成对重放 `function_call` 与 `function_call_output`，不向用户暴露协议兼容错误。
 - 直连 Agent 暴露与该 skill 对齐的 `canvas_get_*`、`canvas_create_*`、`canvas_generate_*`、更新、移动、连接、选择、视口和 `canvas_apply_ops` 工具，共覆盖当前“我的画布”模块支持的画布操作。
 - 用户要求生图时优先调用 `canvas_generate_image`。该工具沿用原项目流程创建提示词节点、图片配置节点和连线，随后对配置节点执行 `run_generation`；`add_node` 只创建节点，不能代表生成成功。
 - 如果模型在明确的生图请求中仍只返回 `add_node`，工具层会将其作为可修正错误回传，要求模型改用 `canvas_generate_image` 或补充指向真实节点的 `run_generation`。
@@ -84,6 +85,8 @@ npm run preview -- --host 127.0.0.1 --port 4173
 ## Canvas Agent 多窗口与历史管理
 
 - Canvas Agent 继续复用原有直连请求、Canvas skill 和画布操作协议；多窗口只扩展会话展示层，不重写请求逻辑。
+- 每个 Canvas Agent 会话的输入框提供 Codex 风格的模型与推理强度选择；内置 `gpt-5.6-sol`、`gpt-5.6-terra`、`gpt-5.6-luna`、`gpt-5.5`、`gpt-5.4-mini` 和 `gpt-5.4`。5.6 系列提供 `none/low/medium/high/xhigh/max`，其余内置模型不显示 `max`；切换模型时会自动回退到当前模型支持的强度。
+- 模型与推理强度随会话持久化到现有 `direct:conversations:v1` 数据中；旧会话缺少字段时从全局 Agent 配置推导，无法匹配内置模型时回退到 `gpt-5.6-sol` 和 `medium`。
 - 每个已打开历史会话对应一个独立 Agent 卡片，拥有自己的输入草稿、附件、运行状态、停止按钮和请求控制器，可同时运行。
 - 桌面端根据可用宽高采用单列滚动或宽屏双列网格；低于 `900px` 时只展示当前聚焦会话，其他窗口继续保留运行状态并可从历史列表切换。
 - 历史列表支持搜索、打开、删除和运行中状态提示，并通过统一 overlay root 渲染，避免被短窗口或画布容器裁剪。

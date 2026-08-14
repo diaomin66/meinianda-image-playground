@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Popover, Tooltip } from 'antd'
+import { Button, Popover, Select, Tooltip } from 'antd'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowDown, ArrowUp, Bot, Check, Copy, History, ImagePlus, Plus, Search, Settings2, Square, Trash2, X } from 'lucide-react'
 
@@ -7,6 +7,7 @@ import { useStore } from '../../../store'
 import MarkdownRenderer from '../../../components/MarkdownRenderer'
 import { copyTextToClipboard } from '../../../lib/clipboard'
 import { getDirectAgentProfile, runDirectCanvasAgentTurn } from '@canvas/lib/agent/direct-agent'
+import { DIRECT_AGENT_MODEL_OPTIONS, DIRECT_AGENT_REASONING_LABELS, getDirectAgentModel, getDirectAgentReasoningEffort, getDirectAgentReasoningEfforts } from '@canvas/lib/agent/direct-agent-models'
 import { canvasThemes } from '@canvas/lib/canvas-theme'
 import { randomId } from '@canvas/lib/utils'
 import { useThemeStore } from '@canvas/stores/use-theme-store'
@@ -47,6 +48,9 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
   const messages = activeConversation?.messages || []
   const sending = activeConversation?.sending || false
   const activity = activeConversation?.activity || (directConversationsLoaded ? '就绪' : '加载中')
+  const selectedModel = getDirectAgentModel(activeConversation?.model || profileState.profile?.model)
+  const selectedReasoningEffort = getDirectAgentReasoningEffort(selectedModel, activeConversation?.reasoningEffort || profileState.profile?.reasoningEffort)
+  const reasoningOptions = getDirectAgentReasoningEfforts(selectedModel).map((value) => ({ label: DIRECT_AGENT_REASONING_LABELS[value], value }))
   const sortedConversations = useMemo(
     () => [...directConversations].sort((a, b) => b.updatedAt - a.updatedAt),
     [directConversations],
@@ -136,6 +140,8 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
       const result = await runDirectCanvasAgentTurn({
         settings,
         messages: history,
+        model: selectedModel,
+        reasoningEffort: selectedReasoningEffort,
         snapshot: canvasContext?.snapshot || null,
         applyOps: (ops) => {
           if (!canvasContext) throw new Error('画布上下文尚未就绪，请先打开一个画布。')
@@ -396,7 +402,7 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
             placeholder={profileState.profile ? '询问画布 Agent…' : '请先配置全局 Agent 模型'}
           />
           <div className="mt-2 flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1">
+            <div className="flex min-w-0 flex-1 items-center gap-1">
               <input ref={fileInputRef} hidden type="file" accept="image/*" multiple onChange={(event) => {
                 void addFiles(event.target.files)
                 event.target.value = ''
@@ -404,6 +410,32 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
               <Tooltip title="上传图片">
                 <Button type="text" shape="circle" className="!h-9 !w-9 !min-w-9" disabled={sending} style={{ color: theme.node.muted }} icon={<ImagePlus className="size-4" />} onClick={() => fileInputRef.current?.click()} />
               </Tooltip>
+              <Select
+                size="middle"
+                value={selectedModel}
+                options={DIRECT_AGENT_MODEL_OPTIONS.map((option) => ({ label: option.value, value: option.value }))}
+                disabled={sending}
+                className="!h-9 !w-32 !min-w-32 !rounded-xl [&_.ant-select-selector]:!h-9 [&_.ant-select-selector]:!rounded-xl"
+                popupMatchSelectWidth={false}
+                onChange={(value) => {
+                  const nextModel = getDirectAgentModel(value)
+                  updateDirectConversation(activeConversation.id, {
+                    model: nextModel,
+                    reasoningEffort: getDirectAgentReasoningEffort(nextModel, selectedReasoningEffort),
+                  })
+                }}
+                aria-label="选择画布 Agent 模型"
+              />
+              <Select
+                size="middle"
+                value={selectedReasoningEffort}
+                options={reasoningOptions}
+                disabled={sending}
+                className="!h-9 !w-20 !min-w-20 !rounded-xl [&_.ant-select-selector]:!h-9 [&_.ant-select-selector]:!rounded-xl"
+                popupMatchSelectWidth={false}
+                onChange={(value) => updateDirectConversation(activeConversation.id, { reasoningEffort: value })}
+                aria-label="选择模型强度"
+              />
               <span className="min-w-0 truncate text-xs" style={{ color: sending ? theme.node.activeStroke : theme.node.muted }}>{activity}</span>
             </div>
             {sending ? (

@@ -784,3 +784,78 @@
 - `docs/infinite-canvas-connection-rendering.md`: documented the fixed SVG viewport and persistence boundary.
 - `progress.md`: recorded implementation, verification, and rollback details.
 - Rollback: restore the four listed files to their pre-task state, or run `git revert <commit>` after committing.
+
+## 2026-08-14 - Task: Fix Canvas Agent Responses continuation compatibility
+
+### What was done
+
+- Reproduced the Canvas Agent failure with the exact service error `previous_response_id is only supported on Responses WebSocket v2`.
+- Extended the existing Responses compatibility fallback so this error switches the current tool loop to paired `function_call` and `function_call_output` replay without `previous_response_id`.
+- Kept the normal `previous_response_id` continuation path unchanged for services that support it.
+- Documented the Canvas Agent continuation fallback behavior.
+
+### Testing
+
+- Before the fix, `npm test -- --run src/infiniteCanvas/lib/agent/direct-agent.test.ts` failed only for the exact WebSocket v2 error and reproduced the user-visible rejection.
+- After the fix, the targeted test passed: 1 test file and 8 tests.
+- `npm test` passed: 40 test files and 439 tests.
+- `npm run build` passed; only the existing dynamic/static import and large-chunk warnings remain.
+
+### Notes
+
+- `src/infiniteCanvas/lib/agent/direct-agent.ts`: recognizes the service's WebSocket v2-only `previous_response_id` error and activates the existing replay fallback.
+- `src/infiniteCanvas/lib/agent/direct-agent.test.ts`: covers the exact error text and verifies the retry omits `previous_response_id` while replaying the paired tool call and output.
+- `docs/infinite-canvas-integration.md`: documents continuation compatibility behavior.
+- `progress.md`: records the diagnosis, implementation, verification, changed files, and rollback point.
+- Rollback: restore these four files to their pre-task state, or run `git revert <commit>` after committing.
+
+## 2026-08-14 - Task: Add Codex-style Canvas Agent model and reasoning selectors
+
+### What was done
+
+- Added six built-in Canvas Agent model choices: `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini`, and `gpt-5.4`.
+- Added per-model reasoning effort options; `max` is available only for the gpt-5.6 family, and invalid effort values automatically fall back to `medium` when switching models.
+- Added model and reasoning selectors to the existing Canvas Agent input box using the existing Ant Design/theme integration.
+- Persisted per-conversation selections through the existing localforage conversation storage and preserved compatibility with older conversations.
+- Passed the selected model and reasoning effort into the Canvas Agent Responses request without changing global API profile settings.
+
+### Testing
+
+- Targeted model, request, and store tests passed: 3 test files and 15 tests.
+- `npm test` passed: 41 test files and 443 tests.
+- `npm run build` passed; only the existing dynamic/static import and large-chunk warnings remain.
+- Local production preview smoke check completed at `http://127.0.0.1:4173/`.
+
+### Notes
+
+- `src/infiniteCanvas/lib/agent/direct-agent-models.ts`: defines built-in model capabilities, labels, and effort fallback logic.
+- `src/infiniteCanvas/lib/agent/direct-agent.ts`: accepts per-turn model and reasoning overrides.
+- `src/infiniteCanvas/lib/agent/direct-agent-models.test.ts`: verifies model list and capability-aware effort fallback.
+- `src/infiniteCanvas/lib/agent/direct-agent.test.ts`: verifies selected model and effort reach the Responses request body.
+- `src/infiniteCanvas/components/agent/direct-agent-panel.tsx`: renders the existing themed model and effort selectors in the input box.
+- `src/infiniteCanvas/stores/use-agent-store.ts`: adds optional per-conversation selection fields.
+- `src/infiniteCanvas/services/agent-chat-storage.ts`: persists optional selection fields without breaking old records.
+- `docs/infinite-canvas-integration.md`: documents model choices, capability mapping, persistence, and fallback behavior.
+- `progress.md`: records implementation, testing, local deployment, and rollback point.
+- Rollback: restore these nine files to their pre-task state, or run `git revert <commit>` after committing.
+
+## 2026-08-14 - Task: Compact Canvas Agent model controls into the input toolbar
+
+### What was done
+
+- Moved the model and reasoning selectors onto the existing upload/activity/send toolbar row.
+- Matched the existing 36px input control height and rounded-corner language while keeping the model selector at `w-32` and the effort selector at `w-20`.
+- Kept the activity label flexible and truncated so the row remains usable in narrow panels without horizontal overflow.
+
+### Testing
+
+- `npm test` passed: 41 test files and 443 tests.
+- `npm run build` passed; only the existing dynamic/static import and large-chunk warnings remain.
+- Local production preview returned HTTP 200 at `http://127.0.0.1:4173/`.
+- `git diff --check` passed and no debug instrumentation remains.
+
+### Notes
+
+- `src/infiniteCanvas/components/agent/direct-agent-panel.tsx`: compacted and aligned the model/effort selectors with the existing input actions.
+- `progress.md`: recorded this layout refinement and verification.
+- Rollback: restore these two files to their pre-task state, or run `git revert <commit>` after committing.
