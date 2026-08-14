@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import type { CanvasAgentOp, CanvasAgentSnapshot } from '@canvas/lib/canvas/canvas-agent-ops'
 import { randomId } from '@canvas/lib/utils'
 import { readDirectAgentConversations, saveDirectAgentConversations } from '@canvas/services/agent-chat-storage'
+import type { ReasoningEffort } from '../../types'
 
 export type AgentChatRole = 'user' | 'assistant' | 'system' | 'tool' | 'error'
 export type AgentAttachment = { id: string; name: string; type: string; size: number; width: number; height: number; url: string; dataUrl: string }
@@ -14,6 +15,8 @@ export type DirectAgentConversation = {
   createdAt: number
   updatedAt: number
   prompt: string
+  model?: string
+  reasoningEffort?: ReasoningEffort
   attachments: AgentAttachment[]
   sending: boolean
   activity: string

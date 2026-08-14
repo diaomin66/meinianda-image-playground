@@ -1,5 +1,6 @@
 import localforage from "localforage";
 
+import type { ReasoningEffort } from "../../types";
 import { upscaleDataUrl } from "@canvas/lib/canvas/canvas-image-data";
 import type { AgentAttachment, AgentChatItem } from "@canvas/stores/use-agent-store";
 
@@ -10,6 +11,8 @@ export type StoredDirectAgentConversation = {
     createdAt: number;
     updatedAt: number;
     prompt: string;
+    model?: string;
+    reasoningEffort?: ReasoningEffort;
     attachments: AgentAttachment[];
     sending: boolean;
     activity: string;

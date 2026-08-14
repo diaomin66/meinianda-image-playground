@@ -86,6 +86,26 @@ describe('direct canvas agent', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('sends the selected model and reasoning effort', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({
+      id: 'resp-1',
+      output: [{ type: 'message', content: [{ type: 'output_text', text: 'Done.' }] }],
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const input = request()
+
+    await expect(runDirectCanvasAgentTurn({
+      ...input,
+      model: 'gpt-5.6-luna',
+      reasoningEffort: 'max',
+    })).resolves.toBe('Done.')
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject({
+      model: 'gpt-5.6-luna',
+      reasoning: { effort: 'max' },
+    })
+  })
+
   it('returns a structured tool error so the model can recover from an invalid call', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({

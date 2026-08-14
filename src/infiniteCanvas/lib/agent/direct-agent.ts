@@ -1,5 +1,6 @@
 ﻿import type { ApiProfile, AppSettings } from '../../../types'
 import { getAgentTextApiProfile } from '../../../lib/apiProfiles'
+import type { ReasoningEffort } from '../../../types'
 import { buildApiUrl, readClientDevProxyConfig, shouldUseApiProxy } from '../../../lib/devProxy'
 import { getApiErrorMessage } from '../../../lib/imageApiShared'
 import { summarizeCanvasAgentOps, type CanvasAgentOp, type CanvasAgentSnapshot } from '@canvas/lib/canvas/canvas-agent-ops'
@@ -10,6 +11,7 @@ import {
   summarizeDirectCanvasSnapshot,
 } from './canvas-agent-tools'
 import canvasSkill from './canvas-skill.md?raw'
+import { getDirectAgentModel } from './direct-agent-models'
 
 export { parseCanvasOps } from './canvas-agent-op-parser'
 
@@ -46,19 +48,26 @@ export function getDirectAgentProfile(settings: AppSettings): { profile: ApiProf
   return { profile, message: null }
 }
 
-export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, applyOps, signal, onTool }: {
+export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, applyOps, signal, onTool, model, reasoningEffort }: {
   settings: AppSettings
   messages: DirectAgentMessage[]
   snapshot: CanvasAgentSnapshot | null
   applyOps: (ops?: CanvasAgentOp[]) => CanvasAgentSnapshot
   signal: AbortSignal
   onTool?: (ops: CanvasAgentOp[], result: CanvasAgentSnapshot) => void
+  model?: string
+  reasoningEffort?: ReasoningEffort
 }): Promise<string> {
   const { profile, message } = getDirectAgentProfile(settings)
   if (!profile) throw new Error(message || 'Agent 模型不可用')
 
   const proxyConfig = readClientDevProxyConfig()
   const useApiProxy = shouldUseApiProxy(profile.apiProxy, proxyConfig)
+  const requestProfile = {
+    ...profile,
+    ...(model ? { model: getDirectAgentModel(model) } : {}),
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+  }
   const initialInput = messages.flatMap((message) => {
     const content = message.role === 'user'
       ? [
@@ -81,7 +90,7 @@ export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, a
     let payload: DirectResponsePayload
     try {
       payload = await requestResponse({
-        profile,
+        profile: requestProfile,
         proxyConfig,
         useApiProxy,
         snapshot: canvasSnapshot,
@@ -93,7 +102,7 @@ export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, a
       if (!usePreviousResponse || !responseId || !shouldUseCompatibilityContinuation(error)) throw error
       usePreviousResponse = false
       payload = await requestResponse({
-        profile,
+        profile: requestProfile,
         proxyConfig,
         useApiProxy,
         snapshot: canvasSnapshot,

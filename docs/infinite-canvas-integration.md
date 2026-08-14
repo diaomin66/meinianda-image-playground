@@ -85,6 +85,8 @@ npm run preview -- --host 127.0.0.1 --port 4173
 ## Canvas Agent 多窗口与历史管理
 
 - Canvas Agent 继续复用原有直连请求、Canvas skill 和画布操作协议；多窗口只扩展会话展示层，不重写请求逻辑。
+- 每个 Canvas Agent 会话的输入框提供 Codex 风格的模型与推理强度选择；内置 `gpt-5.6-sol`、`gpt-5.6-terra`、`gpt-5.6-luna`、`gpt-5.5`、`gpt-5.4-mini` 和 `gpt-5.4`。5.6 系列提供 `none/low/medium/high/xhigh/max`，其余内置模型不显示 `max`；切换模型时会自动回退到当前模型支持的强度。
+- 模型与推理强度随会话持久化到现有 `direct:conversations:v1` 数据中；旧会话缺少字段时从全局 Agent 配置推导，无法匹配内置模型时回退到 `gpt-5.6-sol` 和 `medium`。
 - 每个已打开历史会话对应一个独立 Agent 卡片，拥有自己的输入草稿、附件、运行状态、停止按钮和请求控制器，可同时运行。
 - 桌面端根据可用宽高采用单列滚动或宽屏双列网格；低于 `900px` 时只展示当前聚焦会话，其他窗口继续保留运行状态并可从历史列表切换。
 - 历史列表支持搜索、打开、删除和运行中状态提示，并通过统一 overlay root 渲染，避免被短窗口或画布容器裁剪。
