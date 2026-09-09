@@ -1,0 +1,124 @@
+{
+  "date": "2026-09-08",
+  "commit": "4ba4d858186098153bcbf22e065d6151b1d49d02",
+  "version": "0.8.1",
+  "environment": "Isolated Chrome contexts; localhost Vite; external model calls intercepted or blocked",
+  "build": {
+    "mainCssKB": 242.06,
+    "mainCssGzipKB": 41.33,
+    "mainJsGzipKB": 795.97,
+    "passed": true,
+    "mainJsKB": 2567.19
+  },
+  "tests": {
+    "filesPassed": 41,
+    "testsPassed": 443
+  },
+  "dependencyAudit": {
+    "scope": "npm audit output; exploitability not established",
+    "moderate": 3,
+    "low": 3,
+    "high": 11,
+    "total": 17
+  },
+  "browserProbes": {
+    "probes": [
+      {
+        "name": "canvas-cancel",
+        "callerAborted": true,
+        "upstreamAborted": false,
+        "fetchReceivedAbort": false,
+        "finalOutcome": "AbortError"
+      },
+      {
+        "name": "transparent-output",
+        "request": {
+          "url": "https://meinianda.top/v1/images/generations",
+          "body": {
+            "model": "gpt-image-2",
+            "prompt": "a cat",
+            "output_format": "png",
+            "background": "opaque",
+            "moderation": "auto",
+            "size": "1024x1024",
+            "quality": "auto"
+          }
+        },
+        "resultUnchanged": true
+      },
+      {
+        "name": "gemini-blob-reference",
+        "error": "Gemini 参考图必须是 Base64 data URL",
+        "networkRequests": 0
+      },
+      {
+        "name": "canvas-param-snapshot",
+        "snapshotFormat": "png",
+        "effectiveFormat": "jpeg"
+      },
+      {
+        "name": "indexeddb-commit",
+        "abortedTransaction": true,
+        "writeReportedSuccess": true,
+        "stored": false
+      }
+    ],
+    "errors": []
+  },
+  "lifecycleProbes": {
+    "lifecycle": {
+      "requestCompleted": true,
+      "requestAborted": false,
+      "savedNodeStatus": "loading",
+      "savedNodeHasImage": false,
+      "storedImageCount": 1
+    },
+    "sw": {
+      "before": [
+        "infinite-canvas-image-files-v1"
+      ],
+      "after": [
+        "meinianda-image-playground-v0.8.0"
+      ],
+      "fallbackImagePreserved": false
+    },
+    "errors": []
+  },
+  "storageProbes": {
+    "fallback": {
+      "fallbackWritten": "new-project",
+      "recoveredValue": null
+    },
+    "initialization": {
+      "newTaskInjectedDuringRead": true,
+      "visibleTaskIds": [],
+      "persistedTaskIds": [
+        "audit-new-task"
+      ]
+    },
+    "references": {
+      "collectedKeys": [],
+      "referenceExistsBefore": true,
+      "referenceExistsAfter": false
+    }
+  },
+  "performanceProbes": {
+    "persist": {
+      "selectionUpdates": 100,
+      "localStorageWrites": 100,
+      "distinctPayloads": 1,
+      "serializedCharacters": 225400
+    },
+    "mobile": {
+      "listLayout": {
+        "width": 390,
+        "documentWidth": 380
+      },
+      "projectLayout": {
+        "width": 390,
+        "documentWidth": 380
+      }
+    },
+    "errors": []
+  }
+}

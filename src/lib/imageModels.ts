@@ -1,10 +1,14 @@
+import type { ApiProfile, TaskParams } from '../types'
+
 export const GPT_IMAGE_MODEL = 'gpt-image-2'
+export const GPT_IMAGE_25_MODELS = ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'] as const
+export const GPT_IMAGE_MODELS = [GPT_IMAGE_MODEL, ...GPT_IMAGE_25_MODELS] as const
 export const DEFAULT_GPT_IMAGE_SIZE = '1024x1024'
 export const GEMINI_FLASH_IMAGE_MODEL = 'gemini-3.1-flash-image'
 export const GEMINI_PRO_IMAGE_MODEL = 'gemini-3-pro-image'
 
 export const GALLERY_IMAGE_MODELS = [
-  GPT_IMAGE_MODEL,
+  ...GPT_IMAGE_MODELS,
   GEMINI_FLASH_IMAGE_MODEL,
   GEMINI_PRO_IMAGE_MODEL,
 ] as const
@@ -43,4 +47,17 @@ export function isGalleryImageModel(value: string): value is GalleryImageModel {
 
 export function isGeminiImageModel(value: string) {
   return value === GEMINI_FLASH_IMAGE_MODEL || value === GEMINI_PRO_IMAGE_MODEL
+}
+
+export function isGptImageModel(value: string): value is typeof GPT_IMAGE_MODELS[number] {
+  return GPT_IMAGE_MODELS.some((model) => model === value)
+}
+
+export function getImageQualityOptions(profile: ApiProfile): TaskParams['quality'][] {
+  if (profile.provider === 'fal') return ['low', 'medium', 'high']
+  if (profile.provider === 'gemini' || profile.codexCli) return ['auto']
+  if (profile.apiMode === 'images' && GPT_IMAGE_25_MODELS.some((model) => model === profile.model)) {
+    return ['auto', 'low', 'medium', 'high', 'xhigh', 'max']
+  }
+  return ['auto', 'low', 'medium', 'high']
 }

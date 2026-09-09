@@ -18,6 +18,8 @@ import {
   GEMINI_STANDARD_ASPECT_RATIOS,
   GPT_IMAGE_MODEL,
   isGalleryImageModel,
+  isGeminiImageModel,
+  getImageQualityOptions,
   type GalleryImageModel,
 } from '../lib/imageModels'
 import { FIXED_GEMINI_PROFILE_ID, FIXED_IMAGE_PROFILE_ID } from '../lib/fixedApiProfiles'
@@ -501,18 +503,7 @@ export default function InputBar() {
     ? DEFAULT_FAL_IMAGE_SIZE
     : (activeProfile.codexCli ? normalizeCodexCliImageSize(params.size) : normalizeImageSize(params.size)) || DEFAULT_PARAMS.size
 
-  const qualityOptions = isFalProvider
-    ? [
-        { label: 'low', value: 'low' },
-        { label: 'medium', value: 'medium' },
-        { label: 'high', value: 'high' },
-      ]
-    : [
-        { label: 'auto', value: 'auto' },
-        { label: 'low', value: 'low' },
-        { label: 'medium', value: 'medium' },
-        { label: 'high', value: 'high' },
-      ]
+  const qualityOptions = getImageQualityOptions(activeProfile).map((value) => ({ label: value, value }))
   const maxReferenceImages = isGeminiProvider ? GEMINI_MAX_REFERENCE_IMAGES : OPENAI_MAX_REFERENCE_IMAGES
   const atImageLimit = inputImages.length >= maxReferenceImages
   const uploadImageTooltipText = atImageLimit ? `参考图数量已达上限（${maxReferenceImages} 张），无法继续添加` : '上传图片'
@@ -569,21 +560,24 @@ export default function InputBar() {
 
   const handleGalleryModelChange = useCallback((model: GalleryImageModel) => {
     if (appMode !== 'gallery') return
-    const profileId = model === GPT_IMAGE_MODEL ? FIXED_IMAGE_PROFILE_ID : FIXED_GEMINI_PROFILE_ID
+    const isGemini = isGeminiImageModel(model)
+    const profileId = isGemini ? FIXED_GEMINI_PROFILE_ID : FIXED_IMAGE_PROFILE_ID
     setSettings({
       activeProfileId: profileId,
       profiles: settings.profiles.map((profile) =>
-        profile.id === FIXED_GEMINI_PROFILE_ID
-          ? { ...profile, model: model === GPT_IMAGE_MODEL ? GEMINI_FLASH_IMAGE_MODEL : model }
+        profile.id === profileId
+          ? { ...profile, model }
           : profile,
       ),
     })
-    setParams({
-      size: model === GPT_IMAGE_MODEL ? DEFAULT_GPT_IMAGE_SIZE : '1K',
-      aspect_ratio: 'auto',
-      n: DEFAULT_PARAMS.n,
-    })
-  }, [appMode, setParams, setSettings, settings.profiles])
+    if (isGemini !== isGeminiProvider) {
+      setParams({
+        size: isGemini ? '1K' : DEFAULT_GPT_IMAGE_SIZE,
+        aspect_ratio: 'auto',
+        n: DEFAULT_PARAMS.n,
+      })
+    }
+  }, [appMode, isGeminiProvider, setParams, setSettings, settings.profiles])
 
   const selectAtImageOption = useCallback((option: AtImageOption) => {
     const el = textareaRef.current
@@ -1809,7 +1803,7 @@ export default function InputBar() {
             <div className="hidden lg:flex items-end justify-between gap-3">
               {renderParams('flex flex-wrap items-end [&>label]:flex-none')}
 
-              <div className="flex gap-2 flex-shrink-0 mb-0.5">
+              <div className="flex gap-2 flex-shrink-0">
                 <div
                   className="relative"
                   onMouseEnter={() => setAttachHover(true)}

@@ -8,9 +8,34 @@ import {
   FIXED_RESPONSES_PROFILE_ID,
   lockApiSettings,
 } from './fixedApiProfiles'
-import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_PRO_IMAGE_MODEL } from './imageModels'
+import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_PRO_IMAGE_MODEL, GPT_IMAGE_MODELS } from './imageModels'
 
 describe('locked API settings', () => {
+  it.each(GPT_IMAGE_MODELS)('保留 Images API 模型 %s，重复保存不回退', (model) => {
+    const initial = lockApiSettings({ apiKey: 'image-key' })
+    const selected = lockApiSettings({
+      ...initial,
+      profiles: initial.profiles.map((profile) => profile.id === FIXED_IMAGE_PROFILE_ID ? { ...profile, model } : profile),
+    })
+    const restored = lockApiSettings(JSON.parse(JSON.stringify(selected)))
+
+    expect(restored.model).toBe(model)
+    expect(restored.activeProfileId).toBe(FIXED_IMAGE_PROFILE_ID)
+    expect(restored.profiles.find((profile) => profile.id === FIXED_IMAGE_PROFILE_ID)).toMatchObject({
+      model, provider: 'openai', apiMode: 'images', apiKey: 'image-key', baseUrl: FIXED_API_BASE_URL,
+    })
+    expect(restored.profiles.find((profile) => profile.id === FIXED_GEMINI_PROFILE_ID)?.model).toBe(GEMINI_FLASH_IMAGE_MODEL)
+  })
+
+  it('不接受固定生图配置以外的模型', () => {
+    const initial = lockApiSettings({})
+    const settings = lockApiSettings({
+      ...initial,
+      profiles: initial.profiles.map((profile) => profile.id === FIXED_IMAGE_PROFILE_ID ? { ...profile, model: 'unknown-model' } : profile),
+    })
+    expect(settings.model).toBe(DEFAULT_IMAGES_MODEL)
+  })
+
   it('keeps only the three fixed profiles while preserving their API keys', () => {
     const settings = lockApiSettings({
       profiles: [

@@ -191,7 +191,7 @@ export default function InputParamsPanel({
 
   if (isGeminiProvider) {
     return (
-      <div className={`${layout} flex-1 gap-2 text-xs`}>
+      <div className={`input-params-panel ${layout} flex-1 gap-2 text-xs`}>
         {modelControl}
         {sizeControl}
         <label className="flex min-w-0 flex-col gap-0.5">
@@ -235,7 +235,7 @@ export default function InputParamsPanel({
   }
 
   return (
-    <div className={`${layout} flex-1 gap-2 text-xs`}>
+    <div className={`input-params-panel ${layout} flex-1 gap-2 text-xs`}>
       {modelControl}
       {sizeControl}
       <label

@@ -31,7 +31,7 @@ function SearchActionButton({
           onClick()
         }}
         disabled={disabled}
-        className={className}
+        className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 ${className}`}
         aria-label={tooltip}
       >
         {children}
@@ -130,7 +130,7 @@ export default function SearchBar() {
   }
 
   return (
-    <div ref={rootRef} data-no-drag-select className="mt-6 mb-4 flex gap-3">
+    <div ref={rootRef} data-no-drag-select className="gallery-search-bar mt-6 mb-4 flex items-center gap-2 sm:gap-3">
       <div className="flex gap-2 flex-shrink-0 z-20">
         <SearchActionButton
           tooltip={favoriteTooltip}
@@ -164,7 +164,7 @@ export default function SearchBar() {
                   { label: '生成中', value: 'running' },
                   { label: '失败', value: 'error' },
                 ]}
-                className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-white/[0.06] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
+                className="h-[42px] px-3 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-white/[0.06] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
               />
             </div>
             {isFailedFilter && (
@@ -182,7 +182,7 @@ export default function SearchBar() {
           </>
         )}
       </div>
-      <div className="relative z-10 flex-1">
+      <div className="relative z-10 min-w-0 flex-1">
         <svg
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
           fill="none"
@@ -202,7 +202,7 @@ export default function SearchBar() {
           onChange={(e) => setSearchQuery(e.target.value)}
           type="text"
           placeholder={inCollectionOverview ? '搜索收藏夹名称...' : '搜索提示词、参数...'}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
+          className="h-[42px] w-full pl-10 pr-4 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
         />
       </div>
     </div>

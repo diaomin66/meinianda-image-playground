@@ -33,6 +33,8 @@ import {
     CANVAS_IMAGE_STORAGE_FALLBACK_EVENT,
     isStorageQuotaError,
     uploadImage,
+    cleanupUnusedImages,
+    setImageBlob,
 } from "./image-storage";
 
 describe("canvas image storage", () => {
@@ -109,5 +111,21 @@ describe("canvas image storage", () => {
         expect(isStorageQuotaError(new Error("The current transaction exceeded its quota limitations."))).toBe(true);
         expect(isStorageQuotaError(new DOMException("Quota exceeded", "QuotaExceededError"))).toBe(true);
         expect(isStorageQuotaError(new Error("network failed"))).toBe(false);
+    });
+
+    it("清理保留历史生成引用图，只删除孤立资源", async () => {
+        mocks.iterate.mockImplementation(async (visit) => {
+            visit(new Blob(), "image:reference");
+            visit(new Blob(), "image:orphan");
+        });
+        await cleanupUnusedImages({ nodes: [{ metadata: { references: ["image:reference"] } }] });
+        expect(mocks.removeItem.mock.calls).toEqual([["image:orphan"]]);
+    });
+
+    it("覆盖资源键时释放旧 Object URL", async () => {
+        const revoke = vi.spyOn(URL, "revokeObjectURL");
+        await setImageBlob("image:replace", new Blob(["old"]));
+        await setImageBlob("image:replace", new Blob(["new"]));
+        expect(revoke).toHaveBeenCalledWith("blob:canvas-image");
     });
 });

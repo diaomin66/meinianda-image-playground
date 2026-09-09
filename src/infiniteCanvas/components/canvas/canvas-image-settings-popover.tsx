@@ -9,7 +9,7 @@ import { createCanvasImageParamsPatch, getCanvasGalleryImageModel, getCanvasGall
 import { useStore } from "../../../store";
 import { normalizeSettings } from "../../../lib/apiProfiles";
 import { normalizeParamsForSettings } from "../../../lib/paramCompatibility";
-import { GEMINI_FLASH_ASPECT_RATIOS, GEMINI_FLASH_IMAGE_MODEL, GEMINI_FLASH_IMAGE_SIZES, GEMINI_PRO_IMAGE_SIZES, GEMINI_STANDARD_ASPECT_RATIOS } from "../../../lib/imageModels";
+import { GEMINI_FLASH_ASPECT_RATIOS, GEMINI_FLASH_IMAGE_MODEL, GEMINI_FLASH_IMAGE_SIZES, GEMINI_PRO_IMAGE_SIZES, GEMINI_STANDARD_ASPECT_RATIOS, getImageQualityOptions } from "../../../lib/imageModels";
 import SizePickerModal from "../../../components/SizePickerModal";
 import { Select as CanvasSelect, SelectContent, SelectItem, SelectTrigger } from "@canvas/components/ui/select";
 import type { CanvasNodeMetadata } from "@canvas/types/canvas";
@@ -137,7 +137,7 @@ export function CanvasGalleryImageSettingsPopover({ metadata, onConfigChange, bu
                         updateDialogView("size");
                     }}>{isGemini ? `${normalizedParams.size} · ${normalizedParams.aspect_ratio}` : normalizedParams.size}</Button></label>
                     <label className="space-y-1.5 text-sm"><span>数量</span><InputNumber className="w-full" min={1} max={isFal ? 4 : 10} value={normalizedParams.n} onChange={(value) => updateParams({ n: Number(value) || 1 })} /></label>
-                    {!isGemini && <label className="space-y-1.5 text-sm"><span>质量</span><Select className="w-full" value={normalizedParams.quality} disabled={profile.codexCli} options={(isFal ? ["low", "medium", "high"] : ["auto", "low", "medium", "high"]).map((value) => ({ value, label: value }))} onChange={(value) => updateParams({ quality: value })} /></label>}
+                    {!isGemini && <label className="space-y-1.5 text-sm"><span>质量</span><Select className="w-full" value={normalizedParams.quality} disabled={profile.codexCli} options={getImageQualityOptions({ ...profile, model }).map((value) => ({ value, label: value }))} onChange={(value) => updateParams({ quality: value })} /></label>}
                     {isGeminiFlash && <label className="space-y-1.5 text-sm"><span>思考</span><Select className="w-full" value={normalizedParams.thinking_level} options={["minimal", "high"].map((value) => ({ value, label: value }))} onChange={(value) => updateParams({ thinking_level: value })} /></label>}
                     <label className="space-y-1.5 text-sm"><span>输出格式</span><Select className="w-full" value={normalizedParams.output_format} options={(isGemini ? ["png", "jpeg"] : ["png", "jpeg", "webp"]).map((value) => ({ value, label: value.toUpperCase() }))} onChange={(value) => updateParams({ output_format: value })} /></label>
                     {!isGemini && <label className="space-y-1.5 text-sm"><span>背景</span><Select className="w-full" value={normalizedParams.background} disabled={normalizedParams.output_format === "jpeg"} options={["auto", "opaque", "transparent"].map((value) => ({ value, label: value }))} onChange={(value) => updateParams({ background: value })} /></label>}

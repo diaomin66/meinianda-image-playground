@@ -143,6 +143,10 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
         model: selectedModel,
         reasoningEffort: selectedReasoningEffort,
         snapshot: canvasContext?.snapshot || null,
+        getSnapshot: () => {
+          if (!canvasContext) throw new Error('画布上下文尚未就绪，请先打开一个画布。')
+          return canvasContext.applyOps()
+        },
         applyOps: (ops) => {
           if (!canvasContext) throw new Error('画布上下文尚未就绪，请先打开一个画布。')
           return canvasContext.applyOps(ops)

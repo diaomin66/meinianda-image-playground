@@ -12,8 +12,11 @@ const THUMBNAIL_VERSION = 2
 
 export const CURRENT_THUMBNAIL_VERSION = THUMBNAIL_VERSION
 
+let dbPromise: Promise<IDBDatabase> | undefined
+
 function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise
+  dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = (e) => {
       const db = (e.target as IDBOpenDBRequest).result
@@ -30,9 +33,21 @@ function openDB(): Promise<IDBDatabase> {
         db.createObjectStore(STORE_AGENT_CONVERSATIONS, { keyPath: 'id' })
       }
     }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
+    req.onsuccess = () => {
+      const db = req.result
+      db.onversionchange = () => {
+        db.close()
+        dbPromise = undefined
+      }
+      db.onclose = () => { dbPromise = undefined }
+      resolve(db)
+    }
+    req.onerror = () => {
+      dbPromise = undefined
+      reject(req.error)
+    }
   })
+  return dbPromise
 }
 
 function dbTransaction<T>(
@@ -44,10 +59,16 @@ function dbTransaction<T>(
     (db) =>
       new Promise((resolve, reject) => {
         const tx = db.transaction(storeName, mode)
-        const store = tx.objectStore(storeName)
-        const req = fn(store)
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
+        tx.onerror = () => reject(tx.error || new Error('数据库事务失败'))
+        tx.onabort = () => reject(tx.error || new DOMException('数据库事务已回滚', 'AbortError'))
+        try {
+          const req = fn(tx.objectStore(storeName))
+          tx.oncomplete = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+        } catch (err) {
+          tx.abort()
+          reject(err)
+        }
       }),
   )
 }
@@ -78,7 +99,7 @@ export function commitTaskDeletion(deletedTaskIds: string[], updatedTasks: TaskR
         for (const conversation of updatedConversations) conversationStore.put(conversation)
         tx.oncomplete = () => resolve(undefined)
         tx.onerror = () => reject(tx.error)
-        tx.onabort = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error || new DOMException('数据库事务已回滚', 'AbortError'))
       }),
   )
 }
@@ -111,7 +132,7 @@ export function replaceAgentConversations(conversations: AgentConversation[]): P
         for (const conversation of conversations) store.put(conversation)
         tx.oncomplete = () => resolve(undefined)
         tx.onerror = () => reject(tx.error)
-        tx.onabort = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error || new DOMException('数据库事务已回滚', 'AbortError'))
       }),
   )
 }
@@ -202,6 +223,7 @@ export function deleteImage(id: string): Promise<undefined> {
         tx.objectStore(STORE_THUMBNAILS).delete(id)
         tx.oncomplete = () => resolve(undefined)
         tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error || new DOMException('数据库事务已回滚', 'AbortError'))
       }),
   )
 }
@@ -215,6 +237,7 @@ export function clearImages(): Promise<undefined> {
         tx.objectStore(STORE_THUMBNAILS).clear()
         tx.oncomplete = () => resolve(undefined)
         tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error || new DOMException('数据库事务已回滚', 'AbortError'))
       }),
   )
 }

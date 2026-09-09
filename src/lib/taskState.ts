@@ -4,6 +4,12 @@ type TaskLifecyclePatch = Pick<TaskRecord, 'status' | 'error' | 'finishedAt' | '
 type ActualParams = Partial<TaskParams>
 type ImageSize = { width?: number; height?: number }
 
+export function mergeLoadedTasks(loaded: TaskRecord[], current: TaskRecord[], initial: TaskRecord[]) {
+  const currentIds = new Set(current.map((task) => task.id))
+  const deletedIds = new Set(initial.filter((task) => !currentIds.has(task.id)).map((task) => task.id))
+  return [...current, ...loaded.filter((task) => !currentIds.has(task.id) && !deletedIds.has(task.id))]
+}
+
 export function createTaskDonePatch(task: Pick<TaskRecord, 'createdAt'>, now: number): TaskLifecyclePatch {
   return {
     status: 'done',

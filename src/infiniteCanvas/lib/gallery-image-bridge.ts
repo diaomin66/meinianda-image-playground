@@ -1,9 +1,11 @@
 import { callImageApi } from "../../lib/api";
 import { getActiveApiProfile, getAgentTextApiProfile, normalizeSettings } from "../../lib/apiProfiles";
 import { FIXED_GEMINI_PROFILE_ID, FIXED_IMAGE_PROFILE_ID } from "../../lib/fixedApiProfiles";
-import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_PRO_IMAGE_MODEL, GPT_IMAGE_MODEL } from "../../lib/imageModels";
+import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_PRO_IMAGE_MODEL, GPT_IMAGE_MODELS } from "../../lib/imageModels";
 import { getChangedParams, normalizeParamsForSettings } from "../../lib/paramCompatibility";
 import { useStore } from "../../store";
+import { createTransparentOutputMeta, getTransparentRequestParams, removeKeyedBackgroundFromDataUrl } from "../../lib/transparentImage";
+import { imageToDataUrl } from "@canvas/services/image-storage";
 import type { ApiProfile, AppSettings, TaskParams } from "../../types";
 import type { AiConfig } from "@canvas/stores/use-config-store";
 import type { CanvasNodeMetadata } from "@canvas/types/canvas";
@@ -38,7 +40,9 @@ export function getCanvasGalleryImageProfile(settings: AppSettings, profileId?: 
 export function getCanvasGalleryModelOptions(settings: AppSettings): CanvasGalleryModelOption[] {
     const normalized = normalizeSettings(settings);
     return normalized.profiles.filter(isImageProfile).flatMap((profile) => {
-        if (profile.id === FIXED_IMAGE_PROFILE_ID) return [{ value: `${profile.id}:${GPT_IMAGE_MODEL}`, profileId: profile.id, model: GPT_IMAGE_MODEL, label: GPT_IMAGE_MODEL }];
+        if (profile.id === FIXED_IMAGE_PROFILE_ID) {
+            return GPT_IMAGE_MODELS.map((model) => ({ value: `${profile.id}:${model}`, profileId: profile.id, model, label: model }));
+        }
         if (profile.id === FIXED_GEMINI_PROFILE_ID) {
             return [GEMINI_FLASH_IMAGE_MODEL, GEMINI_PRO_IMAGE_MODEL].map((model) => ({ value: `${profile.id}:${model}`, profileId: profile.id, model, label: model }));
         }
@@ -66,7 +70,7 @@ export function getCanvasGalleryImageParams(metadata: CanvasNodeMetadata | undef
     const state = useStore.getState();
     void profileId;
     void hasInputImages;
-    return { ...state.params, ...legacyImageParams(metadata), ...metadata?.imageParams };
+    return { ...state.params, ...legacyImageParams(metadata), ...metadata?.imageParamsSnapshot, ...metadata?.imageParams };
 }
 
 export function createCanvasImageParamsPatch(metadata: CanvasNodeMetadata | undefined, params: TaskParams): Pick<CanvasNodeMetadata, "imageParams" | "imageParamsSnapshot" | "size" | "quality" | "background" | "count"> {
@@ -122,13 +126,31 @@ export async function requestCanvasGalleryImages(config: AiConfig, prompt: strin
     const state = useStore.getState();
     const count = Math.max(1, Math.min(15, Math.floor(Math.abs(Number(config.count)) || 1)));
     const settings = settingsForProfile(state.settings, config.galleryImageProfileId, config.model);
+    const normalizedParams = normalizeParamsForSettings({ ...config.galleryImageParams, n: count }, settings, { hasInputImages: references.length > 0 });
+    const transparent = normalizedParams.output_format === "png" && normalizedParams.transparent_output;
+    const inputImageDataUrls = await Promise.all(references.map((reference) => imageToDataUrl(reference, signal)));
+    const maskDataUrl = mask ? await imageToDataUrl(mask, signal) : undefined;
+    signal?.throwIfAborted();
     const result = await callImageApi({
         settings,
-        prompt,
-        params: normalizeParamsForSettings({ ...config.galleryImageParams, n: count }, settings, { hasInputImages: references.length > 0 }),
-        inputImageDataUrls: references.map((reference) => reference.dataUrl),
-        ...(mask?.dataUrl ? { maskDataUrl: mask.dataUrl } : {}),
+        prompt: transparent ? createTransparentOutputMeta(prompt).effectivePrompt : prompt,
+        params: transparent ? getTransparentRequestParams(normalizedParams) : { ...normalizedParams, transparent_output: false },
+        inputImageDataUrls,
+        maskDataUrl,
+        signal,
     });
     if (signal?.aborted) throw new DOMException("Request aborted", "AbortError");
-    return result.images.map((dataUrl, index) => ({ id: `${config.galleryImageProfileId}-${index}`, dataUrl }));
+    const images = await Promise.all(result.images.map(async (dataUrl, index) => {
+        const id = `${config.galleryImageProfileId}-${index}`;
+        if (!transparent) return { id, dataUrl };
+        try {
+            return { id, dataUrl: await removeKeyedBackgroundFromDataUrl(dataUrl), originalDataUrl: dataUrl };
+        } catch (error) {
+            console.warn("透明后处理失败，保留生成原图", error);
+            useStore.getState().showToast("透明后处理失败，已保留生成原图", "info");
+            return { id, dataUrl };
+        }
+    }));
+    signal?.throwIfAborted();
+    return images;
 }

@@ -8,6 +8,7 @@ import { UserStatusActions } from "@canvas/components/layout/user-status-actions
 import { canvasThemes } from "@canvas/lib/canvas-theme";
 import { useCanvasSidePanelStore } from "@canvas/stores/use-canvas-side-panel-store";
 import { useThemeStore } from "@canvas/stores/use-theme-store";
+import { flushCanvasSave, useCanvasSaveStore } from "@canvas/stores/canvas/use-canvas-store";
 
 export function CanvasTopBar({
     title,
@@ -56,6 +57,8 @@ export function CanvasTopBar({
 }) {
     const colorTheme = useThemeStore((state) => state.theme);
     const theme = canvasThemes[colorTheme];
+    const saveStatus = useCanvasSaveStore((state) => state.status);
+    const saveError = useCanvasSaveStore((state) => state.error);
     const titleRef = useRef<HTMLDivElement>(null);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [headerHost, setHeaderHost] = useState<HTMLElement | null>(null);
@@ -142,6 +145,9 @@ export function CanvasTopBar({
                         )}
                     </div>
                     <CompactAgentStatus status={compactAgentStatus} onClick={onToggleAgent} />
+                    <button type="button" className={`text-xs ${saveStatus === "error" ? "text-red-500" : "text-stone-500"}`} title={saveError || undefined} disabled={saveStatus !== "error"} onClick={() => void flushCanvasSave().catch(() => {})} aria-live="polite">
+                        {saveStatus === "saving" ? "保存中…" : saveStatus === "error" ? "保存失败，点击重试" : "已保存"}
+                    </button>
                 </div>
 
                 <div className="pointer-events-auto flex items-center gap-1.5">

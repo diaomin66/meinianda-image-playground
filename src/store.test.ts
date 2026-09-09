@@ -17,7 +17,7 @@ vi.mock('./lib/db', () => {
 
   return {
     CURRENT_THUMBNAIL_VERSION: 2,
-    getAllTasks: async () => [...tasks.values()],
+    getAllTasks: vi.fn(async () => [...tasks.values()]),
     putTask: async (task: TaskRecord) => {
       tasks.set(task.id, task)
       return task.id
@@ -600,6 +600,24 @@ describe('input persistence setting', () => {
 })
 
 describe('agent conversation persistence', () => {
+  it('deduplicates startup and keeps tasks added while the stored snapshot is loading', async () => {
+    await clearTasks()
+    await clearAgentConversations()
+    await clearImages()
+    useStore.setState({ tasks: [], agentConversations: [], agentInputDrafts: {}, inputImages: [], galleryInputDraft: null })
+    let release!: (tasks: TaskRecord[]) => void
+    vi.mocked(getAllTasks).mockImplementationOnce(() => new Promise((resolve) => { release = resolve }))
+    const first = initStore()
+    const second = initStore()
+    expect(first).toBe(second)
+    const added = task({ id: 'startup-new', status: 'running' })
+    useStore.getState().setTasks([added])
+    await putDbTask(added)
+    release([])
+    await first
+    expect(useStore.getState().tasks).toEqual([added])
+    expect((await getAllTasks()).map((item) => item.id)).toEqual(['startup-new'])
+  })
   beforeEach(async () => {
     await clearAgentConversations()
   })

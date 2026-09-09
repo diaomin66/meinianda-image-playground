@@ -74,7 +74,7 @@ function normalizeParams(value: unknown, fallback: TaskParams): TaskParams {
       ? value.aspect_ratio
       : fallback.aspect_ratio,
     thinking_level: value.thinking_level === 'minimal' || value.thinking_level === 'high' ? value.thinking_level : fallback.thinking_level,
-    quality: value.quality === 'auto' || value.quality === 'low' || value.quality === 'medium' || value.quality === 'high' ? value.quality : fallback.quality,
+    quality: value.quality === 'auto' || value.quality === 'low' || value.quality === 'medium' || value.quality === 'high' || value.quality === 'xhigh' || value.quality === 'max' ? value.quality : fallback.quality,
     background: value.background === 'auto' || value.background === 'opaque' || value.background === 'transparent' ? value.background : fallback.background,
     output_format: value.output_format === 'png' || value.output_format === 'jpeg' || value.output_format === 'webp' ? value.output_format : fallback.output_format,
     output_compression: value.output_compression === null || (typeof value.output_compression === 'number' && Number.isFinite(value.output_compression))
@@ -83,6 +83,22 @@ function normalizeParams(value: unknown, fallback: TaskParams): TaskParams {
     moderation: value.moderation === 'auto' || value.moderation === 'low' ? value.moderation : fallback.moderation,
     n: typeof value.n === 'number' && Number.isFinite(value.n) ? value.n : fallback.n,
     transparent_output: typeof value.transparent_output === 'boolean' ? value.transparent_output : fallback.transparent_output,
+  }
+}
+
+export function createPersistedStateSelector() {
+  let previous: unknown[] = []
+  let result: PersistedAppState | undefined
+  return (state: PersistedStateSource, includeLegacyAgentConversations = false) => {
+    const inputs = [state.settings, state.params, state.prompt, state.inputImages, state.maskDraft, state.maskEditorImageId,
+      state.dismissedCodexCliPrompts, state.appMode, state.galleryInputDraft, state.agentConversations, state.activeAgentConversationId,
+      state.agentInputDrafts, state.agentSidebarCollapsed, state.agentAssetTab, state.agentAssetPanelCollapsed,
+      state.favoriteCollections, state.defaultFavoriteCollectionId, state.supportPromptDismissed, state.supportPromptOpen,
+      state.supportPromptSkippedForImportedData, includeLegacyAgentConversations]
+    if (result && inputs.every((value, idx) => value === previous[idx])) return result
+    previous = inputs
+    result = createPersistedState(state, includeLegacyAgentConversations)
+    return result
   }
 }
 

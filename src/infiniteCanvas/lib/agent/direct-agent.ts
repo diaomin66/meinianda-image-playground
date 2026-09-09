@@ -48,10 +48,11 @@ export function getDirectAgentProfile(settings: AppSettings): { profile: ApiProf
   return { profile, message: null }
 }
 
-export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, applyOps, signal, onTool, model, reasoningEffort }: {
+export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, getSnapshot, applyOps, signal, onTool, model, reasoningEffort }: {
   settings: AppSettings
   messages: DirectAgentMessage[]
   snapshot: CanvasAgentSnapshot | null
+  getSnapshot?: () => CanvasAgentSnapshot
   applyOps: (ops?: CanvasAgentOp[]) => CanvasAgentSnapshot
   signal: AbortSignal
   onTool?: (ops: CanvasAgentOp[], result: CanvasAgentSnapshot) => void
@@ -87,6 +88,8 @@ export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, a
   const maxRounds = Math.max(1, Math.min(12, settings.agentMaxToolRounds || 12))
 
   for (let round = 0; round < maxRounds; round += 1) {
+    signal.throwIfAborted()
+    if (getSnapshot) canvasSnapshot = getSnapshot()
     let payload: DirectResponsePayload
     try {
       payload = await requestResponse({
@@ -130,6 +133,7 @@ export async function runDirectCanvasAgentTurn({ settings, messages, snapshot, a
       }
       try {
         if (!isDirectCanvasToolName(toolName)) throw new Error(`Agent 调用了未注册的画布工具：${toolName || '未命名工具'}`)
+        if (getSnapshot) canvasSnapshot = getSnapshot()
         const toolResult = runDirectCanvasTool(toolName, call.arguments, canvasSnapshot)
         if (toolResult.kind === 'read') {
           return {

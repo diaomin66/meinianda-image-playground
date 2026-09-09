@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { calculateImageSize, normalizeCodexCliImageSize, prependCodexCliSizePrompt, stripInjectedCodexCliSizePrompt } from './size'
+import { calculateImageSize, normalizeImageSize, normalizeCodexCliImageSize, prependCodexCliSizePrompt, stripInjectedCodexCliSizePrompt } from './size'
+
+describe('GPT Image 自定义尺寸约束', () => {
+  it.each(['3840x2160', '2160x3840', '2880x2880', '1024x640', '640x1024', '3840x1280', '1280x3840', 'auto'])('保留合法边界 %s', (size) => {
+    expect(normalizeImageSize(size)).toBe(size)
+  })
+
+  it.each(['4096x4096', '3840x3840', '3841x2161', '4096x1000', '1000x4096', '16x16', '640x640', '1x10000'])('将 %s 调整至所有约束范围内', (size) => {
+    const [width, height] = normalizeImageSize(size).split('x').map(Number)
+    expect(width % 16).toBe(0)
+    expect(height % 16).toBe(0)
+    expect(Math.max(width, height)).toBeLessThanOrEqual(3840)
+    expect(Math.max(width, height) / Math.min(width, height)).toBeLessThanOrEqual(3)
+    expect(width * height).toBeGreaterThanOrEqual(655_360)
+    expect(width * height).toBeLessThanOrEqual(8_294_400)
+  })
+})
 
 describe('calculateImageSize', () => {
   it('uses common 16:9 display resolutions for the built-in tiers', () => {

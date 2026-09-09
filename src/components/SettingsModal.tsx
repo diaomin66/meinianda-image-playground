@@ -1602,7 +1602,7 @@ export default function SettingsModal() {
                     <ExportIcon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                     <h4 className="text-sm font-bold text-gray-800 dark:text-gray-100">导出数据</h4>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">受浏览器文件大小限制，过大的备份将自动分片导出，请允许浏览器下载多个文件</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">此处备份画廊任务、全局 Agent 和所选配置；无限画布及 Canvas Agent 请在画布库使用「全部导出（含 Agent）」。过大的备份会自动分片，请允许下载多个文件。</p>
                   <div className="flex flex-wrap gap-x-6 gap-y-3">
                     <Checkbox
                       checked={exportConfig}

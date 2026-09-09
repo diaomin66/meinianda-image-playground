@@ -1,9 +1,65 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PARAMS } from '../types'
 import { DEFAULT_SETTINGS } from './apiProfiles'
+import { FIXED_API_BASE_URL, FIXED_IMAGE_PROFILE_ID, lockApiSettings } from './fixedApiProfiles'
+import { GPT_IMAGE_25_MODELS } from './imageModels'
 import { callImageApi } from './api'
 
 describe('callImageApi', () => {
+  it.each(GPT_IMAGE_25_MODELS.flatMap((model) =>
+    (['auto', 'low', 'medium', 'high', 'xhigh', 'max'] as const).flatMap((quality) =>
+      [false, true].map((isEdit) => ({ model, quality, isEdit })),
+    ),
+  ))('$model quality=$quality edit=$isEdit 使用 Images API 并传递 4K 透明 PNG 参数', async ({ model, quality, isEdit }) => {
+    const size = isEdit ? '2160x3840' : '3840x2160'
+    const originalFetch = globalThis.fetch
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input).startsWith('data:')) return originalFetch(input, init)
+      return new Response(JSON.stringify({
+        data: [{ b64_json: 'aW1hZ2U=' }], quality, size, background: 'transparent', output_format: 'png',
+      }), { headers: { 'Content-Type': 'application/json' } })
+    })
+    const initial = lockApiSettings({ apiKey: 'test-key' })
+    const settings = lockApiSettings({
+      ...initial,
+      profiles: initial.profiles.map((profile) => profile.id === FIXED_IMAGE_PROFILE_ID ? { ...profile, model } : profile),
+    })
+    const result = await callImageApi({
+      settings,
+      prompt: '透明背景的小猫',
+      params: { ...DEFAULT_PARAMS, quality, size, background: 'transparent', output_format: 'png' },
+      inputImageDataUrls: isEdit ? ['data:image/png;base64,aW1hZ2U='] : [],
+    })
+
+    const requests = fetchMock.mock.calls.filter(([url]) => !String(url).startsWith('data:'))
+    expect(requests).toHaveLength(1)
+    const [url, init] = requests[0]
+    expect(url).toBe(`${FIXED_API_BASE_URL}/images/${isEdit ? 'edits' : 'generations'}`)
+    const body = isEdit ? Object.fromEntries((init!.body as FormData).entries()) : JSON.parse(String(init!.body))
+    expect(body).toMatchObject({ model, quality, size, background: 'transparent', output_format: 'png' })
+    if (isEdit) expect((init!.body as FormData).get('image[]')).toBeInstanceOf(Blob)
+    expect(result.images).toEqual(['data:image/png;base64,aW1hZ2U='])
+    expect(result.actualParams).toMatchObject({ quality, size, background: 'transparent', output_format: 'png' })
+    expect(result.actualParamsList?.[0]?.quality).toBe(quality)
+  })
+
+  it('停止信号在响应头返回后仍会取消图片结果下载', async () => {
+    const controller = new AbortController()
+    let downloadSignal: AbortSignal | null | undefined
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input).includes('result.png')) {
+        downloadSignal = init?.signal
+        return new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('Stopped', 'AbortError')), { once: true }))
+      }
+      return new Response(JSON.stringify({ data: [{ url: 'https://example.com/result.png' }] }), { headers: { 'Content-Type': 'application/json' } })
+    })
+    const pending = callImageApi({ settings: { ...DEFAULT_SETTINGS, apiMode: 'images' }, prompt: 'cat', params: DEFAULT_PARAMS, inputImageDataUrls: [], signal: controller.signal })
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    await vi.waitFor(() => expect(downloadSignal).toBeDefined())
+    controller.abort()
+    expect(downloadSignal?.aborted).toBe(true)
+    await rejected
+  })
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllEnvs()

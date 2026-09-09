@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { createDeduplicatedStorage } from './lib/deduplicatedStorage'
 import type {
   AgentConversation,
   AgentInputDraft,
@@ -66,8 +67,8 @@ import { deleteAgentRoundFromConversation, getActiveAgentRounds, getAgentRoundPa
 import { canonicalizeBatchFunctionCallArguments, countResponseToolCalls, createReadyAgentRecoveredToolState, getAgentFunctionOutputCallIds, getAgentRecoveredFailureError, getAgentRecoveredToolCallCount, getPersistableAgentConversations, getPersistableRawResponsePayload, mergeResponseOutputItems, scrubResponseOutputForDeletedAgentTasks, scrubTaskRawResponsePayloadForDeletedTasks } from './lib/agentResponseState'
 import { cleanStaleAgentInputDrafts, clearInputDraftState, isEmptyAgentInputDraft, normalizeAgentInputDrafts, remapAgentInputDraftMentionsForPathChange, restoreAgentInputDraftState, restoreGalleryInputDraftState, saveActiveAgentInputDrafts, saveGalleryInputDraft, syncActiveInputDraft, updateInputDraftImages } from './lib/inputDraftState'
 import { ALL_FAVORITES_COLLECTION_ID, DEFAULT_FAVORITE_COLLECTION_ID, createDefaultFavoriteCollection, deleteFavoriteCollectionState, ensureDefaultFavoriteCollection, getTaskFavoriteCollectionIds, mergeFavoriteCollections, normalizeFavoriteCollectionIds, normalizeFavoriteCollectionName, normalizeFavoriteCollections, normalizeFavoritePatch, normalizeLoadedFavoriteState, resolveDefaultFavoriteCollectionId, sameFavoriteCollectionIds } from './lib/favoriteState'
-import { createPersistedState, mergePersistedAgentConversations, migratePersistedState, normalizePersistedState } from './lib/persistedState'
-import { addImageSizeParam, createTaskDonePatch, createTaskErrorPatch, deriveAgentImageActualParams, deriveGalleryActualParams, firstActualParams, hasActualParams, hasActualSizeParam, mapActualParamsByImage, mapRevisedPromptsByImage, markInterruptedOpenAIRunningTasks } from './lib/taskState'
+import { createPersistedStateSelector, mergePersistedAgentConversations, migratePersistedState, normalizePersistedState } from './lib/persistedState'
+import { addImageSizeParam, createTaskDonePatch, createTaskErrorPatch, deriveAgentImageActualParams, deriveGalleryActualParams, firstActualParams, hasActualParams, hasActualSizeParam, mapActualParamsByImage, mapRevisedPromptsByImage, markInterruptedOpenAIRunningTasks, mergeLoadedTasks } from './lib/taskState'
 import { stripInjectedCodexCliSizePrompt } from './lib/size'
 
 const FAL_RECOVERY_POLL_MS = 10_000
@@ -235,8 +236,10 @@ function isEmptyAgentConversation(conversation: AgentConversation) {
   return conversation.rounds.length === 0 && conversation.messages.length === 0 && !conversation.activeRoundId
 }
 
+const selectPersistedState = createPersistedStateSelector()
+
 export function getPersistedState(state: AppState) {
-  return createPersistedState(state, agentConversationMigrationPending && !agentConversationPersistenceReady)
+  return selectPersistedState(state, agentConversationMigrationPending && !agentConversationPersistenceReady)
 }
 
 async function replaceStoredAgentConversations(conversations: AgentConversation[]) {
@@ -968,6 +971,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'gpt-image-playground',
+      storage: createDeduplicatedStorage(() => localStorage),
       version: 3,
       migrate: migratePersistedState,
       partialize: getPersistedState,
@@ -1398,7 +1402,15 @@ async function recoverFalTask(taskId: string) {
 }
 
 /** 初始化：从 IndexedDB 加载任务，按需恢复输入图片，并清理孤立图片 */
-export async function initStore() {
+let initPromise: Promise<void> | undefined
+
+export function initStore(): Promise<void> {
+  if (!initPromise) initPromise = loadStore().finally(() => { initPromise = undefined })
+  return initPromise
+}
+
+async function loadStore() {
+  const initialTasks = useStore.getState().tasks
   const legacyAgentConversations = normalizeAgentConversations(useStore.getState().agentConversations)
   const storedTasks = (await getAllTasks()).map((task) => ({
     ...task,
@@ -1450,9 +1462,13 @@ export async function initStore() {
     useStore.getState().setDefaultFavoriteCollectionId(normalizedFavorites.defaultFavoriteCollectionId)
   }
   await Promise.all(tasks
-    .filter((task, index) => normalizedFavorites.changed || interruptedTaskIds.has(task.id) || task.rawResponsePayload !== markedTasks[index]?.rawResponsePayload)
+    .filter((task, index) => (
+      !useStore.getState().tasks.some((current) => current.id === task.id) &&
+      !initialTasks.some((initial) => initial.id === task.id) &&
+      (normalizedFavorites.changed || interruptedTaskIds.has(task.id) || task.rawResponsePayload !== markedTasks[index]?.rawResponsePayload)
+    ))
     .map((task) => putTask(task)))
-  useStore.getState().setTasks(tasks)
+  useStore.getState().setTasks(mergeLoadedTasks(tasks, useStore.getState().tasks, initialTasks))
   showSupportPromptForExistingLocalData(tasks)
   for (const task of tasks) {
     if (
@@ -1498,10 +1514,10 @@ export async function initStore() {
   const imageIds = await getAllImageIds()
   const referencedImageIds: string[] = []
   for (const imgId of imageIds) {
-    if (referencedIds.has(imgId)) {
+    if (referencedIds.has(imgId) || isImageReferencedByState(useStore.getState(), imgId)) {
       referencedImageIds.push(imgId)
     } else {
-      await deleteImage(imgId)
+      await deleteStoredImageIfUnreferenced(imgId)
     }
   }
   scheduleThumbnailBackfill(referencedImageIds)
@@ -1519,8 +1535,9 @@ export async function initStore() {
       cacheImage(img.id, storedImage.dataUrl)
     }
   }
-  if (restoredInputImages.length !== persistedInputImages.length || restoredInputImages.some((img, index) => img.dataUrl !== persistedInputImages[index]?.dataUrl)) {
-    useStore.getState().setInputImages(restoredInputImages)
+  if (useStore.getState().inputImages === persistedInputImages && (restoredInputImages.length !== persistedInputImages.length || restoredInputImages.some((img, index) => img.dataUrl !== persistedInputImages[index]?.dataUrl))) {
+    // 恢复不等于用户编辑，避免刷新草稿时间并覆盖随后恢复的原始草稿。
+    useStore.setState(updateInputDraftImages(useStore.getState(), restoredInputImages))
   }
 
   if (galleryInputDraft) {
@@ -1546,7 +1563,7 @@ export async function initStore() {
       restoredGalleryImages.length !== galleryInputDraft.inputImages.length ||
       restoredGalleryImages.some((img, index) => img.dataUrl !== galleryInputDraft.inputImages[index]?.dataUrl) ||
       shouldClearMask
-    if (galleryDraftsChanged) {
+    if (galleryDraftsChanged && useStore.getState().galleryInputDraft === galleryInputDraft) {
       const latestState = useStore.getState()
       const nextGalleryInputDraft = isEmptyAgentInputDraft(restoredGalleryDraft) ? null : restoredGalleryDraft
       useStore.setState({
@@ -1589,7 +1606,7 @@ export async function initStore() {
       agentDraftsChanged = true
     }
   }
-  if (agentDraftsChanged) {
+  if (agentDraftsChanged && useStore.getState().agentInputDrafts === agentInputDrafts) {
     const latestState = useStore.getState()
     useStore.setState({
       agentInputDrafts: restoredAgentInputDrafts,
@@ -1602,6 +1619,7 @@ export async function initStore() {
 
 /** 提交新任务 */
 export async function submitTask(options: { allowFullMask?: boolean; useCurrentApiProfileWhenReusedMissing?: boolean } = {}) {
+  if (initPromise) await initPromise
   const { settings, prompt, inputImages, maskDraft, params, reusedTaskApiProfileId, reusedTaskApiProfileName, reusedTaskApiProfileMissing, showToast, setConfirmDialog } =
     useStore.getState()
 
@@ -2262,6 +2280,7 @@ async function continueRecoveredAgentRound(taskId: string) {
 }
 
 export async function submitAgentMessage() {
+  if (initPromise) await initPromise
   const state = useStore.getState()
   const { settings, prompt, inputImages, maskDraft, params, showToast } = state
   const normalizedSettings = normalizeSettings(settings)
