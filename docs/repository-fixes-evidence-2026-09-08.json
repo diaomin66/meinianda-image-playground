@@ -1,0 +1,242 @@
+{
+  "date": "2026-09-08",
+  "recordedAt": "2026-09-08T15:22:09.867Z",
+  "baselineCommit": "4ba4d858186098153bcbf22e065d6151b1d49d02",
+  "version": "0.8.1",
+  "state": "Uncommitted workspace changes; no deployment",
+  "environment": {
+    "operatingSystem": "Windows",
+    "browser": "Local Google Chrome, headless, isolated contexts",
+    "network": "Local Vite dev and production preview; external model requests mocked or blocked; dummy API keys"
+  },
+  "build": {
+    "passed": true,
+    "entryFile": "index-DJ6NkiUT.js",
+    "baselineEntryKB": 2567.19,
+    "entryKB": 880.39,
+    "baselineEntryGzipKB": 795.97,
+    "entryGzipKB": 270.31,
+    "note": "Entry chunk sizes only; not total first-load transfer or measured loading time",
+    "remainingWarnings": [
+      "Some chunks exceed 500 kB",
+      "Canvas store imported both statically and dynamically"
+    ]
+  },
+  "tests": {
+    "passed": true,
+    "filesPassed": 51,
+    "testsPassed": 480,
+    "baselineFilesPassed": 41,
+    "baselineTestsPassed": 443
+  },
+  "diffCheckPassed": true,
+  "dependencyAudit": {
+    "baseline": {
+      "scope": "npm audit output; exploitability not established",
+      "moderate": 3,
+      "low": 3,
+      "high": 11,
+      "total": 17
+    },
+    "final": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 457,
+        "dev": 322,
+        "optional": 111,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 779
+      }
+    },
+    "note": "Successful npm audit retry on 2026-09-08; initial TLS failure; advisory counts do not prove exploitability or absence of unknown defects"
+  },
+  "installedVersions": {
+    "axios": "1.20.0",
+    "nanoid": "5.1.16",
+    "react-router-dom": "7.18.3",
+    "vite": "6.4.3",
+    "vitest": "4.1.5"
+  },
+  "browserLifecycle": {
+    "lifecycle": {
+      "requestCompleted": true,
+      "requestAborted": false,
+      "savedNodeStatus": "success",
+      "savedNodeHasImage": true,
+      "storedImageCount": 1
+    },
+    "sw": {
+      "before": [
+        "infinite-canvas-image-files-v1"
+      ],
+      "after": [
+        "infinite-canvas-image-files-v1",
+        "meinianda-image-playground-v0.8.1"
+      ],
+      "fallbackImagePreserved": true
+    },
+    "errors": []
+  },
+  "browserRegressions": {
+    "core": {
+      "transaction": {
+        "injected": true,
+        "outcome": "AbortError",
+        "absent": true
+      },
+      "initialization": {
+        "added": true,
+        "visible": [
+          "concurrent"
+        ],
+        "stored": [
+          "concurrent"
+        ]
+      },
+      "references": {
+        "key": "image:6sB9lheOr4pGfilv5die-",
+        "preserved": true
+      },
+      "gemini": {
+        "count": 1,
+        "inlineData": true
+      },
+      "transparent": {
+        "enhancedPrompt": true,
+        "alpha": 0,
+        "originalPreserved": true
+      },
+      "cancel": {
+        "networkAborted": true,
+        "outcome": "AbortError"
+      },
+      "historicalFormat": "png",
+      "uiWrites": 0
+    },
+    "backup": {
+      "projects": 1,
+      "conversations": 2,
+      "referenceRestored": true,
+      "messageRestored": true,
+      "newProjectId": "cNJdLsNL9tyHRwnVIP_6L",
+      "afterReload": 1
+    },
+    "gallery": {
+      "count": 90,
+      "first": "gallery-90",
+      "selected": [
+        "gallery-0"
+      ],
+      "pagination": "上一页第 2 / 112 页 · 共 10000 个任务下一页"
+    },
+    "errors": []
+  },
+  "browserProduction": {
+    "editorDeferredUntilOpened": true,
+    "workspaceNavigationPassed": true,
+    "initialJsChunks": 5,
+    "finalJsChunks": 7,
+    "errors": [],
+    "failedAssets": []
+  },
+  "unitOnlyAdditionalScenarios": [
+    "Fallback authority with stale or null primary; recovery; delete tombstone; write ordering",
+    "Canceled generation; deletion; delete-and-undo stale batch target; preserve concurrent node position edits",
+    "Canvas persistence failure and retry",
+    "Cancel result download after response headers; fal SDK receives AbortSignal",
+    "Import preflight; resource write rollback; resource remapping; preserve edits during import",
+    "Imported attachment URL restoration; late conversation loading cannot overwrite import",
+    "Canvas Agent queued conversation writes coalesced; failure and retry",
+    "Empty Agent selection and fresh tool snapshots",
+    "WebDAV merge preserves concurrent local edits, deletions and additions"
+  ],
+  "remainingWork": [
+    "Per-project incremental canvas storage and migration",
+    "Bounded Object URL cache with view ownership",
+    "Worker-based ZIP handling and broader imported metadata/archive limits",
+    "Incremental global Agent conversation/message persistence",
+    "WebDAV deletion tombstones and Canvas Agent integration",
+    "Further large-chunk optimization"
+  ],
+  "notVerified": [
+    "Real model provider calls and billing cancellation",
+    "Real WebDAV server or cross-device conflicts",
+    "Safari/mobile browsers",
+    "Docker/Cloudflare deployment",
+    "Remote GitHub Actions execution"
+  ],
+  "modifiedFileSha256": {
+    ".github/workflows/test.yml": "f5cfc05ce66c5b6239bdb0ab066ee34f9a4a019c06adc16bd4e7f840a1ad640d",
+    "README.md": "3f1cd113642116bcc223d2a62ac33427511fe1da0a55006a5c7a4f35a13b838f",
+    "package-lock.json": "a52c00bc614bd9db7888be0537e6b72d4f9183121e28d61faaff30f863fe19f0",
+    "package.json": "92044dea8690a2119a230d5c8663465571ef9e064af316d23b7f830bec2ffd85",
+    "public/sw.js": "bc6ee0d4b421f27d5be285859e21eb9010c19e7ee5d246187acc40569a96d615",
+    "src/App.tsx": "9f18d911486fe97f25cafe7a868277e798bafe889b5d86326d0c886df6e897d2",
+    "src/components/SettingsModal.tsx": "241e5a10c9cf9bcc02fc3366fd13e5c4044289e1360f8df80c26cc662a17e45d",
+    "src/components/TaskGrid.tsx": "6d4665225d977190b4daad8a97eda76de3f3591551d64ed2b14505eb0f5c65e2",
+    "src/infiniteCanvas/InfiniteCanvasModule.tsx": "4be7b16830e1d9aa91decfedfcbd9fafd87f48522c84fe5e7ed590a83c8ff898",
+    "src/infiniteCanvas/components/agent/direct-agent-panel.tsx": "9cdf051c33b575451fe84ba88ba234c299ffe4c7495ee2ba62a827979c4b78e8",
+    "src/infiniteCanvas/components/canvas/canvas-project-card.tsx": "cb044a2efe573b158a5da4d6d1592eae68c6c61f737398344e989533c33ed354",
+    "src/infiniteCanvas/components/canvas/canvas-top-bar.tsx": "14680bd60cbb38ea5d69d8e81e8e647714cbf5119e328789fc8c407f59adf654",
+    "src/infiniteCanvas/components/layout/app-config-modal.tsx": "35d015e35af360ccc3d52d7331228971bb7c320c96d566711ad99adec4eeaee3",
+    "src/infiniteCanvas/lib/agent/direct-agent.test.ts": "e0793b940e564329e041855106768708e52adf74ad762c5bad94b1502190fb1b",
+    "src/infiniteCanvas/lib/agent/direct-agent.ts": "d6ddbf1e19c93a28abd366df383482250348efc7769621d3f110d75be62b2c97",
+    "src/infiniteCanvas/lib/canvas/canvas-export.ts": "d51f9b0929eb6360d2bed91b13de5170c7a7fb8b872e7ec5fa10065423271ee6",
+    "src/infiniteCanvas/lib/canvas/canvas-generation-requests.ts": "75186ca152f578a415bcf75e1a208a1c2b164a00d8bab4ca01b2bb212ff5a629",
+    "src/infiniteCanvas/lib/canvas/canvas-generation-update.test.ts": "e8644e57cf544122c861c967529e687e689dca9a0b3910e471eb2004f2eb4536",
+    "src/infiniteCanvas/lib/canvas/canvas-generation-update.ts": "f1a9f1b3ef26ead63d7eb36f9d282b48db702e3b673cb9cbf76f5e199a282af0",
+    "src/infiniteCanvas/lib/canvas/canvas-import.test.ts": "cfa1eb6ebfd061f06ed59b428b0397489a722897cbc35f4e87cbe683a5136fbf",
+    "src/infiniteCanvas/lib/canvas/canvas-import.ts": "0b070227f5c24dc6250bd9e8dc67ac0e3131e6c860bf615e62b65824440307e8",
+    "src/infiniteCanvas/lib/canvas/canvas-node-factory.ts": "301a86f90cc83a0a801adc40796c09aebf474ce8d5712c59d7e2fe849ebb3ed1",
+    "src/infiniteCanvas/lib/gallery-image-bridge.test.ts": "28fc9f25604009326874aec2f955184a322edc0fa75df62047e8465e6f307def",
+    "src/infiniteCanvas/lib/gallery-image-bridge.ts": "306a26715dde2557e7c2846de11fe9ad55e2d0226c13cf2af0a8198fd1729be6",
+    "src/infiniteCanvas/lib/localforage-storage.test.ts": "090880c650da24bc9b4d342a1b369e51153a88d9f3a578d2dfe0c08bfade1488",
+    "src/infiniteCanvas/lib/localforage-storage.ts": "2fb787a8b44b226e4a5971e847a3d750c7e5d69d7d0cecc009762e8fd4cec1ce",
+    "src/infiniteCanvas/pages/canvas/hooks/use-agent-bridge.test.ts": "c0451d45463a08411b93afe8685f4c9d6d0e049eb9df30857b265b647f9ca080",
+    "src/infiniteCanvas/pages/canvas/hooks/use-agent-bridge.ts": "59cf784c75ee69c2237d1ba1396c589d89cdbbc839bbaffb89707df3aa48b559",
+    "src/infiniteCanvas/pages/canvas/hooks/use-project-field.ts": "2d281cfeea44f013990059e4e20646f087a90dc26d1ca44f62a1d0c01f98f69b",
+    "src/infiniteCanvas/pages/canvas/index.tsx": "bbfffc37452e62815d3d0fedff17702d80463610dc6330c32b200d4a7ec5638e",
+    "src/infiniteCanvas/pages/canvas/project.tsx": "7c153660131bae51cf4010b6e2e93ba62dbfebd927b21a48c8a03183758c0190",
+    "src/infiniteCanvas/services/agent-chat-storage.test.ts": "224685bc367649129bd83ffc8ffe0ff7f7a8504655620930e92b72322ceb3db4",
+    "src/infiniteCanvas/services/agent-chat-storage.ts": "6dcbdd52ef6b9ea0e78c41b108c5def749f53afcebab02b3bebde07ec42537ca",
+    "src/infiniteCanvas/services/app-sync.ts": "c7d3db94971476172dd66e9c7b0aea5b386bee7fe02650d025e7011ce6bde2c4",
+    "src/infiniteCanvas/services/file-storage.ts": "7fc20012b069533060395455eeb89bc8cb5546bf4747c8b171b46c3f642e980b",
+    "src/infiniteCanvas/services/image-storage.test.ts": "3ad611dbc9c24aa4410e0e3b73e20c27b5ee20675d5d1c8bcd8f9286ee0e4414",
+    "src/infiniteCanvas/services/image-storage.ts": "aa62e4f151cbf5ae08bcd35cc8ac0604c52121145cc9428724a9fcd04aec626b",
+    "src/infiniteCanvas/stores/canvas/use-canvas-store.ts": "af38a1c7a82ea6d38cc9dcada62d128ae65c1ccd9dfa1230c7034dbee0c02f06",
+    "src/infiniteCanvas/stores/use-agent-store.test.ts": "0cb3b459c595e93299288a9eed844abe9fbba19565f2e772a2b4aecb5a6e19c9",
+    "src/infiniteCanvas/stores/use-agent-store.ts": "c39a9c15fb1119e83b7470ab6c7ea05624cd24352c431935f5af804422734d9f",
+    "src/infiniteCanvas/types/canvas-export.ts": "7eb098aedc53f82afccd49d092254f7f710164082950e726be97b8322ab6edd7",
+    "src/infiniteCanvas/types/canvas.ts": "72c444c26029a5a29e48b8288ff1ab2ae0e8e5740c0b30cdd0a93f067ded0dda",
+    "src/lib/abort.test.ts": "3443c922ef6064b29e4ab1a0b904a53808195e5731706d7710bfb981730605a8",
+    "src/lib/abort.ts": "d819c034dfe2b4f4f61415c60f9f5440e4fac584fbb4310703c3f0fe86207a57",
+    "src/lib/api.test.ts": "279c1498d822b68956aed830b08f8b1f21584ac37da385bc489ef12967bf359e",
+    "src/lib/api.ts": "cd687db3b150b5ba52dbc982c0b9d4e346e84bab00cb207d3ea77fd8ffe2deee",
+    "src/lib/db.test.ts": "745c72c7a98c3d947f0e7b99601c211d99e6bc4964b0fe8c9f930018f864687a",
+    "src/lib/db.ts": "33040de61bf112a80194adf21ba2df122fb70f027b37baea72940f27198627d9",
+    "src/lib/deduplicatedStorage.test.ts": "bb58bd6b35a2d5bdb27b472fabdf0e8aee90d56c8583342792812f48274cff75",
+    "src/lib/deduplicatedStorage.ts": "600b32ca20e2354c042828aedae1d7537e6854bac50dff09e60af539e260497c",
+    "src/lib/falAiImageApi.test.ts": "50c23c5db6dcc93783889bf084c3f40d87bdca89c5dc6c765e6cb77e52045c69",
+    "src/lib/falAiImageApi.ts": "18319f65000a67f5cdd02d3c45938ae9b721316145d38b669f71b8a8da7b57c9",
+    "src/lib/geminiImageApi.ts": "a1563cca89ea7b953ed96e6b897375448a6168232a79d3fae8bde051261b8489",
+    "src/lib/imageApiShared.ts": "ec61fd1985d284cbc6d84bb0fdf54699684066ca0f0d8235de2d418529c98657",
+    "src/lib/openaiCompatibleImageApi.ts": "f352819c3c9752e5b07be8f828263a3ff6a7ac08ce5734ff3ea972e6f09580e7",
+    "src/lib/persistedState.ts": "d4e66233da532be122531c49b56ce65758e3c997c9fad3f6922168c83bacffd6",
+    "src/lib/serviceWorker.test.ts": "124a9bd7af220fb10f7ceb2430da9453a4169049c2d57f93948c9dd53f23b6f1",
+    "src/lib/storageReferences.test.ts": "85be85bd223d92fbb93ac05dee4fc23607cedd80b404435cb41401aa4682afe8",
+    "src/lib/storageReferences.ts": "e0e340e77601486dfa7e92e13cce630c2d6f7202b1f62e2c3fda908838371c16",
+    "src/lib/syncMerge.test.ts": "db47a30952f751bacd97c853e1d91f73edd62f5ba211f9301c04495588576c74",
+    "src/lib/syncMerge.ts": "343072647cde3ac28321de194d8648a75c115fdf4aa189ae9a9b47dafa37ecfb",
+    "src/lib/taskState.ts": "76ed515e7b1b9e7ff30e0adbcaf27ee29cbd9950c2774d6c4eb5b8295aed8238",
+    "src/store.test.ts": "cb17363bc5e42f5087b5023b9d2ca114d54435290ceda101bd6e7842819da918",
+    "src/store.ts": "867ffa5da165d0c022a4d02eca9216ec6adf866f229baebe1deafceeeb28f7c2"
+  }
+}

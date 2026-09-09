@@ -1,4 +1,5 @@
-const CACHE_NAME = 'meinianda-image-playground-v0.8.0'
+const CACHE_PREFIX = 'meinianda-image-playground-v'
+const CACHE_NAME = `${CACHE_PREFIX}0.8.2`
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './pwa-icon.svg']
 const APP_SHELL_URLS = new Set(APP_SHELL.map((path) => new URL(path, self.registration.scope).href))
 const ASSETS_PATH = new URL('./assets/', self.registration.scope).pathname
@@ -13,7 +14,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
+      Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))),
     ),
   )
   self.clients.claim()

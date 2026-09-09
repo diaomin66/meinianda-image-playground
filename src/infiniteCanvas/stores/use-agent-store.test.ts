@@ -95,4 +95,16 @@ describe('canvas Agent window state', () => {
       directConversationsLoaded: true,
     })
   })
+
+  it('旧加载完成时不会覆盖导入已经载入的会话', async () => {
+    let finish!: () => void
+    storage.readDirectAgentConversations.mockImplementationOnce(() => new Promise((resolve) => { finish = () => resolve([]) }))
+    const loading = useAgentStore.getState().loadDirectConversations()
+    const imported = conversation('imported', 1)
+    useAgentStore.setState({ directConversations: [imported], directConversationsLoaded: true, directConversationsLoading: false })
+    finish()
+    await loading
+    expect(useAgentStore.getState().directConversations).toEqual([imported])
+    expect(useAgentStore.getState().directConversationsLoading).toBe(false)
+  })
 })

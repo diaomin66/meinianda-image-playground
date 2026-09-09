@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { useStore } from '../store'
 import { useTooltip } from '../hooks/useTooltip'
 import { dismissAllTooltips } from '../lib/tooltipDismiss'
@@ -36,35 +36,22 @@ function AppModeNav({
   onChange: (mode: AppMode) => void
 }) {
   const activeIndex = APP_MODES.findIndex((item) => item.mode === appMode)
-  const activeLabel = APP_MODES[activeIndex]?.label || ''
+  const reducedMotion = useReducedMotion()
 
   return (
-    <div className={mobile
-      ? 'relative mx-2 grid h-[42px] grid-cols-3 items-center gap-1 rounded-xl border border-gray-200 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]'
-      : 'app-mode-nav relative mr-4 hidden h-[42px] w-[238px] self-center grid-cols-3 items-center gap-1 rounded-xl border border-gray-200 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04] sm:grid'}
+    <nav aria-label="工作区" className={mobile
+      ? 'app-mode-nav relative mx-2 grid h-[42px] grid-cols-3 items-center gap-1 rounded-xl border border-gray-200/80 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]'
+      : 'app-mode-nav relative mr-3 hidden h-[42px] w-[238px] shrink-0 self-center grid-cols-3 items-center gap-1 rounded-xl border border-gray-200/80 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04] sm:grid'}
     >
       <motion.span
         data-app-mode-indicator
         aria-hidden="true"
-        className="absolute bottom-1 left-1 top-1 flex items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm dark:bg-white/10"
+        className="pointer-events-none absolute bottom-1 left-1 top-1 rounded-lg bg-white shadow-sm ring-1 ring-black/[0.04] dark:bg-white/10 dark:ring-white/[0.06]"
         style={{ width: 'calc((100% - 1rem) / 3)' }}
         initial={false}
         animate={{ x: `calc(${activeIndex * 100}% + ${activeIndex * 0.25}rem)` }}
-        transition={{ type: 'spring', stiffness: 500, damping: 31, mass: 0.74 }}
-      >
-        <AnimatePresence initial={false} mode="popLayout">
-          <motion.span
-            key={appMode}
-            className="whitespace-nowrap"
-            initial={{ opacity: 0, y: 6, scale: 0.94 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.94 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {activeLabel}
-          </motion.span>
-        </AnimatePresence>
-      </motion.span>
+        transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38, mass: 0.8 }}
+      />
       {APP_MODES.map((item) => {
         const active = appMode === item.mode
         return (
@@ -73,23 +60,17 @@ function AppModeNav({
             type="button"
             onClick={() => onChange(item.mode)}
             aria-pressed={active}
-            className={`relative h-8 min-w-0 whitespace-nowrap rounded-lg text-sm transition-colors duration-200 ${mobile ? 'px-1' : 'px-2'} ${
+            className={`relative flex h-8 min-w-0 items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium leading-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 ${mobile ? 'px-1' : 'px-2'} ${
               active
-                ? 'font-medium text-gray-900 dark:text-white'
-                : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                ? 'text-gray-900 dark:text-white'
+                : 'text-gray-500 hover:bg-black/[0.03] hover:text-gray-800 dark:hover:bg-white/[0.04] dark:hover:text-gray-200'
             }`}
           >
-            <motion.span
-              className="relative z-10 block whitespace-nowrap"
-              animate={{ opacity: active ? 0 : 1, y: active ? 3 : 0, scale: active ? 0.97 : 1 }}
-              transition={{ type: 'spring', stiffness: 520, damping: 34, mass: 0.68 }}
-            >
-              {item.label}
-            </motion.span>
+            {item.label}
           </button>
         )
       })}
-    </div>
+    </nav>
   )
 }
 
@@ -257,12 +238,12 @@ export default function Header() {
                 </span>
               )}
             </h1>
-            {appMode === 'agent' && <div className="hidden sm:flex items-center gap-1 relative">
+            {appMode === 'agent' && <div className="relative hidden shrink-0 items-center gap-1 sm:flex">
               <button
                 ref={historyButtonRef}
                 type="button"
                 onClick={() => setShowHistoryModal((visible) => !visible)}
-                className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="app-header-action"
                 title="历史任务"
               >
                 <HistoryIcon className="w-5 h-5" />
@@ -273,7 +254,7 @@ export default function Header() {
                   setAppMode('agent')
                   createConversation()
                 }}
-                className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="app-header-action"
                 title="新对话"
               >
                 <EditIcon className="w-5 h-5" />
@@ -284,24 +265,24 @@ export default function Header() {
             </div>}
           </div>
           {appMode === 'agent' && activeConversation && (
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden sm:flex max-w-[30%]">
+            <div className="mr-3 hidden min-w-0 max-w-[24%] items-center lg:flex">
               <button
                 type="button"
                 onClick={() => {
                   setShowHistoryModal(true)
-                  // Use setTimeout to ensure HistoryModal is mounted before setting editing id
+                  // 等历史面板挂载后再进入重命名。
                   setTimeout(() => {
                     useStore.getState().setAgentEditingConversationId(activeConversation.id)
                   }, 0)
                 }}
-                className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate hover:bg-gray-100 dark:hover:bg-white/[0.04] px-2 py-1 rounded transition-colors"
+                className="h-9 min-w-0 truncate rounded-lg px-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
               >
                 {activeConversation.title || 'Agent'}
               </button>
             </div>
           )}
           {showFavoriteCollectionTitle && (
-            <div className="absolute left-1/2 top-1/2 hidden max-w-[30%] -translate-x-1/2 -translate-y-1/2 sm:flex">
+            <div className="mr-3 hidden min-w-0 max-w-[24%] items-center lg:flex">
               <div className="truncate rounded px-2 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300" title={favoriteCollectionTitle}>
                 {favoriteCollectionTitle}
               </div>
@@ -309,7 +290,7 @@ export default function Header() {
           )}
           {appMode === 'canvas' && <div id="canvas-header-slot" className="canvas-header-slot" />}
           <AppModeNav appMode={appMode} onChange={switchAppMode} />
-          <div className="app-header-actions flex items-center gap-1 shrink-0">
+          <div className="app-header-actions flex shrink-0 items-center gap-1 sm:border-l sm:border-gray-200/80 sm:pl-3 dark:sm:border-white/[0.08]">
             {!isPwaInstalled && (
               <div
                 className="relative"
@@ -320,7 +301,7 @@ export default function Header() {
                     dismissAllTooltips()
                     handleInstallClick()
                   }}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+                  className="app-header-action"
                   aria-label="安装为应用"
                 >
                   <InstallIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -339,7 +320,7 @@ export default function Header() {
                   dismissAllTooltips()
                   setShowHelp(true)
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+                className="app-header-action"
                 aria-label="操作指南"
               >
                 <HelpCircleIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -358,12 +339,14 @@ export default function Header() {
                   dismissAllTooltips()
                   setSettings({ theme: dark ? 'light' : 'dark' })
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+                className="app-header-action"
                 aria-label={dark ? '切换到浅色模式' : '切换到深色模式'}
               >
-                {dark
-                  ? <SunIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  : <MoonIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
+                <span key={dark ? 'dark' : 'light'} className="app-header-theme-icon">
+                  {dark
+                    ? <SunIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    : <MoonIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
+                </span>
               </button>
               <ViewportTooltip visible={themeTooltip.visible} className="whitespace-nowrap">
                 {dark ? '切换到浅色模式' : '切换到深色模式'}
@@ -375,7 +358,7 @@ export default function Header() {
             >
               <button
                 onClick={() => setShowSettings(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+                className="app-header-action"
                 aria-label="设置"
               >
                 <SettingsIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -398,12 +381,10 @@ export default function Header() {
         </div>
       </div>
 
-      <div className={`app-header-spacer safe-area-top invisible shrink-0 pointer-events-none transition-all duration-300 ease-in-out ${appMode === 'canvas' ? 'app-header-spacer-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? 'max-h-0 sm:max-h-[500px] opacity-0 sm:opacity-100 overflow-hidden sm:overflow-visible' : 'max-h-[500px] opacity-100'}`} aria-hidden="true">
+      <div className={`app-header-spacer safe-area-top invisible shrink-0 border-b border-transparent pointer-events-none transition-[max-height,opacity] duration-300 ease-in-out ${appMode === 'canvas' ? 'app-header-spacer-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? 'max-h-0 sm:max-h-[500px] opacity-0 sm:opacity-100 overflow-hidden sm:overflow-visible' : 'max-h-[500px] opacity-100'}`} aria-hidden="true">
         <div className="safe-header-inner" />
         <div className={`safe-area-x sm:hidden overflow-hidden transition-all duration-300 ease-in-out ${appMode === 'gallery' && scrollDirection === 'down' ? 'max-h-0 pb-0' : 'max-h-20 pb-2'}`}>
-          <div className="p-1">
-            <div className="py-1.5 text-sm">占位</div>
-          </div>
+          <div className="h-[42px]" />
         </div>
       </div>
       {showHelp && <HelpModal appMode={appMode} isFavoriteCollectionOverview={appMode === 'gallery' && filterFavorite && !activeFavoriteCollectionId} onClose={() => setShowHelp(false)} />}

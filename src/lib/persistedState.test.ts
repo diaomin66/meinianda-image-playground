@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { AgentConversation, AppSettings, FavoriteCollection } from '../types'
 import { DEFAULT_PARAMS } from '../types'
 import { DEFAULT_SETTINGS } from './apiProfiles'
+import { FIXED_IMAGE_PROFILE_ID, lockApiSettings } from './fixedApiProfiles'
+import { GPT_IMAGE_25_MODELS } from './imageModels'
 import { DEFAULT_FAVORITE_COLLECTION_ID } from './favoriteState'
 import { createPersistedState, mergePersistedAgentConversations, migratePersistedState, normalizePersistedState } from './persistedState'
 
@@ -58,6 +60,21 @@ function fallback() {
 }
 
 describe('persisted state codec', () => {
+  it.each(GPT_IMAGE_25_MODELS)('往返保存 %s 的扩展质量、尺寸和背景', (model) => {
+    const initial = lockApiSettings({})
+    const settings = lockApiSettings({
+      ...initial,
+      profiles: initial.profiles.map((profile) => profile.id === FIXED_IMAGE_PROFILE_ID ? { ...profile, model } : profile),
+    })
+    for (const quality of ['xhigh', 'max'] as const) {
+      const params = { ...DEFAULT_PARAMS, quality, size: '3840x2160', background: 'transparent' as const }
+      const persisted = createPersistedState({ ...source(settings), params })
+      const restored = normalizePersistedState(JSON.parse(JSON.stringify(persisted)), fallback(), 100)!
+      expect(restored.state.params).toEqual(params)
+      expect(lockApiSettings(restored.state.settings).model).toBe(model)
+    }
+  })
+
   it('rejects non-record unknown data and falls back field-by-field for an invalid record', () => {
     class ExternalState {}
 

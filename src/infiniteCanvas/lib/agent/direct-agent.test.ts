@@ -31,6 +31,16 @@ function request(settings = lockApiSettings({ apiKey: 'test-key' })) {
 }
 
 describe('direct canvas agent', () => {
+  it('reads the current canvas after generation or user edits instead of the initial snapshot', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ id: 'r1', output: [{ type: 'function_call', call_id: 'read', name: 'canvas_get_selection', arguments: '{}' }] }))
+      .mockResolvedValueOnce(response({ id: 'r2', output_text: 'done' }))
+    vi.stubGlobal('fetch', fetchMock)
+    const getSnapshot = vi.fn().mockReturnValueOnce(snapshot).mockReturnValue({ ...snapshot, selectedNodeIds: ['new-selection'] })
+    await runDirectCanvasAgentTurn({ ...request(), getSnapshot })
+    const input = JSON.parse(fetchMock.mock.calls[1][1].body as string).input
+    expect(JSON.parse(input[0].output).selectedNodeIds).toEqual(['new-selection'])
+  })
   afterEach(() => {
     vi.unstubAllGlobals()
   })

@@ -1,25 +1,29 @@
-import { useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { initStore, useStore } from './store'
 import Header from './components/Header'
 import SearchBar from './components/SearchBar'
 import TaskGrid from './components/TaskGrid'
-import AgentWorkspace from './components/AgentWorkspace'
-import InfiniteCanvasWorkspace from './components/InfiniteCanvasWorkspace'
 import InputBar from './components/InputBar'
-import DetailModal from './components/DetailModal'
 import Lightbox from './components/Lightbox'
-import SettingsModal from './components/SettingsModal'
 import ConfirmDialog from './components/ConfirmDialog'
 import Toast from './components/Toast'
-import MaskEditorModal from './components/MaskEditorModal'
 import ImageContextMenu from './components/ImageContextMenu'
 import SupportPromptModal from './components/SupportPromptModal'
 import { FavoriteCollectionPickerModal, FavoriteCollectionsView, ManageCollectionsModal } from './components/FavoriteCollections'
 import { useGlobalClickSuppression } from './lib/clickSuppression'
 import { useThemeStore as useCanvasThemeStore } from './infiniteCanvas/stores/use-theme-store'
 
+const AgentWorkspace = lazy(() => import('./components/AgentWorkspace'))
+const InfiniteCanvasWorkspace = lazy(() => import('./components/InfiniteCanvasWorkspace'))
+const DetailModal = lazy(() => import('./components/DetailModal'))
+const SettingsModal = lazy(() => import('./components/SettingsModal'))
+const MaskEditorModal = lazy(() => import('./components/MaskEditorModal'))
+
 export default function App() {
   const appMode = useStore((s) => s.appMode)
+  const showSettings = useStore((s) => s.showSettings)
+  const detailTaskId = useStore((s) => s.detailTaskId)
+  const maskEditorImageId = useStore((s) => s.maskEditorImageId)
   const filterFavorite = useStore((s) => s.filterFavorite)
   const activeFavoriteCollectionId = useStore((s) => s.activeFavoriteCollectionId)
   const themePreference = useStore((s) => s.settings.theme)
@@ -29,7 +33,10 @@ export default function App() {
   useGlobalClickSuppression()
 
   useEffect(() => {
-    void initStore()
+    void initStore().catch((error) => {
+      console.error('初始化本地数据失败', error)
+      useStore.getState().showToast('本地数据加载失败，请刷新后重试', 'error')
+    })
   }, [])
 
   useEffect(() => {
@@ -74,6 +81,7 @@ export default function App() {
     <div className={appMode === 'canvas' ? 'canvas-app-shell flex h-dvh min-h-0 flex-col overflow-hidden' : 'min-h-dvh'}>
       <Header />
       <div className={appMode === 'canvas' ? 'app-mode-stage app-mode-stage-canvas' : 'app-mode-stage'}>
+        <Suspense fallback={<div className="p-6" role="status">正在加载工作区…</div>}>
         {appMode === 'canvas' ? (
           <InfiniteCanvasWorkspace />
         ) : appMode === 'agent' ? (
@@ -86,20 +94,21 @@ export default function App() {
             </div>
           </main>
         )}
+        </Suspense>
       </div>
       {appMode !== 'canvas' && (
         <>
           <InputBar />
-          <DetailModal />
+          <Suspense fallback={null}>{detailTaskId && <DetailModal />}</Suspense>
           <Lightbox />
           <SupportPromptModal />
           <FavoriteCollectionPickerModal />
           <ManageCollectionsModal />
-          <MaskEditorModal />
+          <Suspense fallback={null}>{maskEditorImageId && <MaskEditorModal />}</Suspense>
           <ImageContextMenu />
         </>
       )}
-      <SettingsModal />
+      <Suspense fallback={null}>{showSettings && <SettingsModal />}</Suspense>
       <ConfirmDialog />
       <Toast />
     </div>

@@ -1,5 +1,6 @@
 import type { AppSettings, ResponsesOutputItem, TaskParams } from '../types'
 import { blobToDataUrl } from './dataUrl'
+import { forwardAbort } from './abort'
 
 export const MIME_MAP: Record<string, string> = {
   png: 'image/png',
@@ -18,6 +19,7 @@ export interface CallApiOptions {
   /** 输入图片的 data URL 列表 */
   inputImageDataUrls: string[]
   maskDataUrl?: string
+  signal?: AbortSignal
   skipCodexCliSizePrompt?: boolean
   onFalRequestEnqueued?: (request: { requestId: string; endpoint: string }) => void
   onCustomTaskEnqueued?: (task: { taskId: string }) => void
@@ -125,8 +127,9 @@ export function maybeAppendStreamingHint(message: string, status: number, stream
   return appendStreamingUnsupportedHint(message)
 }
 
-async function probeNoCorsReachability(url: string, timeoutMs = 8000): Promise<'opaque' | 'reachable' | 'failed'> {
+async function probeNoCorsReachability(url: string, timeoutMs = 8000, signal?: AbortSignal): Promise<'opaque' | 'reachable' | 'failed'> {
   const controller = new AbortController()
+  const detach = forwardAbort(signal, controller)
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(url, {
@@ -139,11 +142,13 @@ async function probeNoCorsReachability(url: string, timeoutMs = 8000): Promise<'
   } catch {
     return 'failed'
   } finally {
+    detach()
     clearTimeout(timeoutId)
   }
 }
 
 export async function fetchImageUrlAsDataUrl(url: string, fallbackMime: string, signal?: AbortSignal): Promise<string> {
+  signal?.throwIfAborted()
   if (isDataUrl(url)) return url
 
   let response: Response
@@ -153,8 +158,10 @@ export async function fetchImageUrlAsDataUrl(url: string, fallbackMime: string, 
       signal,
     })
   } catch (err) {
+    signal?.throwIfAborted()
     if (err instanceof TypeError) {
-      const probe = await probeNoCorsReachability(url)
+      const probe = await probeNoCorsReachability(url, 8000, signal)
+      signal?.throwIfAborted()
       if (probe === 'opaque') {
         throw new Error(`图片已生成，但因服务商未允许跨域，图片链接下载失败。${IMAGE_FETCH_CORS_HINT}`)
       }
@@ -200,7 +207,7 @@ export function pickActualParams(source: unknown): Partial<TaskParams> {
   const actualParams: Partial<TaskParams> = {}
 
   if (typeof record.size === 'string') actualParams.size = record.size
-  if (record.quality === 'auto' || record.quality === 'low' || record.quality === 'medium' || record.quality === 'high') {
+  if (record.quality === 'auto' || record.quality === 'low' || record.quality === 'medium' || record.quality === 'high' || record.quality === 'xhigh' || record.quality === 'max') {
     actualParams.quality = record.quality
   }
   if (record.background === 'auto' || record.background === 'opaque' || record.background === 'transparent') {

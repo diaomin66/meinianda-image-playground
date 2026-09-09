@@ -159,7 +159,7 @@ export function ImageSettingsTheme({ theme, children }: { theme: CanvasTheme; ch
 }
 
 export function imageQualityLabel(value: string) {
-    return ({ auto: "自动", high: "高", medium: "中", low: "低" } as Record<string, string>)[value] || value;
+    return ({ auto: "自动", max: "最高", xhigh: "超高", high: "高", medium: "中", low: "低" } as Record<string, string>)[value] || value;
 }
 
 export function imageSizeLabel(size: string) {

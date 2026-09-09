@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AppSettings } from '../../types'
+import { GPT_IMAGE_MODELS } from '../../lib/imageModels'
 import {
   FIXED_API_BASE_URL,
   FIXED_GEMINI_API_BASE_URL,
@@ -20,7 +21,7 @@ const CONFIGURATIONS = [
     title: '生图配置',
     baseUrl: FIXED_API_BASE_URL,
     endpoint: 'Images API (/v1/images)',
-    description: '用于画廊中的图片生成与编辑。',
+    description: `用于图片生成与编辑，可选 ${GPT_IMAGE_MODELS.join('、')}。`,
   },
   {
     id: FIXED_GEMINI_PROFILE_ID,
@@ -44,7 +45,7 @@ export default function FixedApiSettingsTab({ draft, commitSettings }: FixedApiS
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-sm leading-relaxed text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
-        服务地址和接口类型已固定；Gemini 模型在画廊参数栏中从两项允许值里选择。API Key 仅保存在当前浏览器中。
+        服务地址和接口类型已固定；GPT Image 和 Gemini 模型可在画廊或画布的模型栏中选择。API Key 仅保存在当前浏览器中。
       </div>
 
       {CONFIGURATIONS.map((configuration) => {

@@ -21,6 +21,12 @@ const falMock = fal as unknown as {
 }
 
 describe('callFalAiImageApi', () => {
+  it('passes cancellation through the SDK subscription', async () => {
+    falMock.subscribe.mockResolvedValue({ requestId: 'request', data: { images: [{ b64_json: 'aW1hZ2U=' }] } })
+    const controller = new AbortController()
+    await callFalAiImageApi({ settings: DEFAULT_SETTINGS, prompt: 'cat', params: DEFAULT_PARAMS, inputImageDataUrls: [], signal: controller.signal }, createDefaultFalProfile({ apiKey: 'test' }))
+    expect(falMock.subscribe).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ abortSignal: controller.signal }))
+  })
   afterEach(() => {
     vi.clearAllMocks()
   })

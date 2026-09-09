@@ -3,12 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { App, Button } from "antd";
 import { Download, FileUp, Plus } from "lucide-react";
 
-import { readZip } from "@canvas/lib/zip";
-import { setMediaBlob } from "@canvas/services/file-storage";
-import { setImageBlob } from "@canvas/services/image-storage";
 import { CanvasDeleteProjectsDialog } from "@canvas/components/canvas/canvas-delete-projects-dialog";
 import { CanvasProjectCard } from "@canvas/components/canvas/canvas-project-card";
-import type { CanvasExportFile } from "@canvas/types/canvas-export";
+import { importCanvasArchive } from "@canvas/lib/canvas/canvas-import";
 import { useCanvasStore } from "@canvas/stores/canvas/use-canvas-store";
 import { useCanvasUiStore } from "@canvas/stores/canvas/use-canvas-ui-store";
 import { useAgentStore } from "@canvas/stores/use-agent-store";
@@ -23,7 +20,6 @@ export default function CanvasPage() {
     const hydrated = useCanvasStore((state) => state.hydrated);
     const projects = useCanvasStore((state) => state.projects);
     const createProject = useCanvasStore((state) => state.createProject);
-    const importProject = useCanvasStore((state) => state.importProject);
     const selectedIds = useCanvasUiStore((state) => state.selectedProjectIds);
     const setDeleteIds = useCanvasUiStore((state) => state.setDeleteProjectIds);
 
@@ -37,24 +33,11 @@ export default function CanvasPage() {
     const importCanvas = async (file?: File) => {
         if (!file) return;
         try {
-            const zip = await readZip(file);
-            const projectFile = zip.get("projects.json");
-            if (!projectFile) throw new Error("missing projects.json");
-            const data = JSON.parse(await projectFile.text()) as CanvasExportFile;
-            await Promise.all(
-                data.projects.flatMap((project) =>
-                    project.files.map(async (item) => {
-                        const blob = zip.get(item.path);
-                        if (!blob) return;
-                        const typedBlob = blob.type ? blob : blob.slice(0, blob.size, item.mimeType);
-                        await (item.storageKey.startsWith("image:") ? setImageBlob(item.storageKey, typedBlob) : setMediaBlob(item.storageKey, typedBlob));
-                    }),
-                ),
-            );
-            data.projects.forEach((item) => importProject(item.project));
-            message.success(`已导入 ${data.projects.length} 个画布`);
-        } catch {
-            message.error("导入失败，请选择有效的画布压缩包");
+            const result = await importCanvasArchive(file);
+            message.success(`已导入 ${result.projects} 个画布、${result.conversations} 个 Agent 对话`);
+        } catch (error) {
+            console.error("导入画布失败", error);
+            message.error(error instanceof Error ? error.message : "导入失败，请选择有效的画布压缩包");
         } finally {
             if (inputRef.current) inputRef.current.value = "";
         }
@@ -83,9 +66,12 @@ export default function CanvasPage() {
                         <h1 className="mt-3 text-3xl font-semibold">无限画布</h1>
                     </div>
                     <div className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
+                        <Button disabled={!hydrated} icon={<Download className="size-4" />} onClick={() => void exportCanvasProjects(projects, "无限画布完整备份", true).catch((error) => message.error(error instanceof Error ? error.message : "导出失败"))}>
+                            全部导出（含 Agent）
+                        </Button>
                         {selectedIds.length ? (
                             <>
-                                <Button disabled={!hydrated} icon={<Download className="size-4" />} onClick={() => void exportCanvasProjects(projects.filter((project) => selectedIds.includes(project.id)), `无限画布-${selectedIds.length}个项目`)}>
+                                <Button disabled={!hydrated} icon={<Download className="size-4" />} onClick={() => void exportCanvasProjects(projects.filter((project) => selectedIds.includes(project.id)), `无限画布-${selectedIds.length}个项目`).catch((error) => message.error(error instanceof Error ? error.message : "导出失败"))}>
                                     导出选中
                                 </Button>
                                 <Button disabled={!hydrated} onClick={() => setDeleteIds(selectedIds)}>

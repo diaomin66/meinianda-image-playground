@@ -33,7 +33,7 @@ async function mapFalImageSize(size: string): Promise<{ width: number; height: n
 }
 
 function mapFalQuality(quality: TaskParams['quality']): 'low' | 'medium' | 'high' {
-  return quality === 'auto' ? 'high' : quality
+  return quality === 'low' || quality === 'medium' ? quality : 'high'
 }
 
 function configureFal(profile: ApiProfile) {
@@ -210,7 +210,8 @@ export async function callFalAiImageApi(opts: CallApiOptions, profile: ApiProfil
     const endpoint = mapFalEndpoint(profile.model, isEdit)
     const input = await createFalRequestInput(opts)
     const result = await fal.subscribe(endpoint, {
-      input,
+        input,
+      abortSignal: opts.signal,
       logs: true,
       onEnqueue: (requestId) => {
         opts.onFalRequestEnqueued?.({ requestId, endpoint })
@@ -218,7 +219,8 @@ export async function callFalAiImageApi(opts: CallApiOptions, profile: ApiProfil
     })
     const payload = result.data as FalApiResponse
     opts.onFalRequestEnqueued?.({ requestId: result.requestId, endpoint })
-    return parseFalResult(payload, opts.params, getFalCustomBaseUrlLabel(profile))
+    opts.signal?.throwIfAborted()
+    return parseFalResult(payload, opts.params, getFalCustomBaseUrlLabel(profile), opts.signal)
   } catch (err) {
     const falMessage = getFalErrorMessage(err)
     if (falMessage) throw new Error(falMessage)

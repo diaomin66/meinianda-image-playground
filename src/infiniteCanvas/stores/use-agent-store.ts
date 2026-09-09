@@ -136,6 +136,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     set({ directConversationsLoading: true })
     try {
       const saved = await readDirectAgentConversations()
+      if (get().directConversationsLoaded) return
       const conversations = saved.length ? saved : [createDirectAgentConversation()]
       const currentOpenIds = get().openDirectConversationIds.filter((id) => conversations.some((conversation) => conversation.id === id))
       const activeDirectConversationId = get().activeDirectConversationId && conversations.some((conversation) => conversation.id === get().activeDirectConversationId)
@@ -159,6 +160,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       if (!saved.length) persistDirectConversations(conversations)
     } catch (error) {
       console.warn('读取画布 Agent 对话失败', error)
+      if (get().directConversationsLoaded) return
       const conversation = createDirectAgentConversation()
       set({
         directConversations: [conversation],

@@ -390,6 +390,85 @@ html.dark .markdown-renderer :where(th) {
   min-height: 3.5rem;
 }
 
+.app-header-action {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 0.625rem;
+  color: #6b7280;
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.app-header-action:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.app-header-action:active {
+  transform: scale(0.94);
+}
+
+.app-header-action:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+}
+
+html.dark .app-header-action {
+  color: #9ca3af;
+}
+
+html.dark .app-header-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+}
+
+.app-header-theme-icon {
+  display: flex;
+  animation: header-theme-in 180ms ease-out;
+}
+
+@keyframes header-theme-in {
+  from { opacity: 0; transform: rotate(-20deg) scale(0.85); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
+}
+
+.input-params-panel > label {
+  gap: 0.25rem;
+}
+
+/* 限定到参数触发控件，避免改变下拉菜单和提示浮层。 */
+.input-params-panel > label > :is(input, button),
+.input-params-panel > label > div > div:first-child {
+  min-height: 2rem;
+  border-radius: 0.625rem;
+  transition-property: background-color, border-color, box-shadow;
+  transition-duration: 150ms;
+}
+
+.input-params-panel > label > :is(input, button):focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+.gallery-search-bar :is(button, input) {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header,
+  .app-header *,
+  .app-header-spacer,
+  .app-header-spacer *,
+  .input-params-panel *,
+  .gallery-search-bar * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .infinite-canvas-host {
   flex: 1 1 0%;
   min-height: 0;

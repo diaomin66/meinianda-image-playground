@@ -3,6 +3,8 @@ import { useStore, reuseConfig, editOutputs, removeTask, taskMatchesFilterStatus
 import { ALL_FAVORITES_COLLECTION_ID, getTaskFavoriteCollectionIds } from '../lib/favoriteState'
 import TaskCard from './TaskCard'
 
+const PAGE_SIZE = 90
+
 export default function TaskGrid() {
   const tasks = useStore((s) => s.tasks)
   const searchQuery = useStore((s) => s.searchQuery)
@@ -18,6 +20,7 @@ export default function TaskGrid() {
   const rootRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const [selectionBox, setSelectionBox] = useState<{ startPageX: number; startPageY: number; currentPageX: number; currentPageY: number } | null>(null)
+  const [page, setPage] = useState(0)
   const dragStart = useRef<{ pageX: number; pageY: number } | null>(null)
   const lastClientPoint = useRef<{ x: number; y: number } | null>(null)
   const hasDragged = useRef(false)
@@ -44,6 +47,12 @@ export default function TaskGrid() {
       return taskMatchesSearchQuery(t, q)
     })
   }, [tasks, searchQuery, filterStatus, filterFavorite, activeFavoriteCollectionId, defaultFavoriteCollectionId])
+
+  const pageCount = Math.max(1, Math.ceil(filteredTasks.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount - 1)
+  const visibleTasks = filteredTasks.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+  useEffect(() => { setPage(0) }, [searchQuery, filterStatus, filterFavorite, activeFavoriteCollectionId])
+  useEffect(() => { if (page !== currentPage) setPage(currentPage) }, [page, currentPage])
 
   const handleDelete = (task: typeof tasks[0]) => {
     setConfirmDialog({
@@ -288,7 +297,7 @@ export default function TaskGrid() {
       className="relative min-h-[50vh]"
     >
       <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-10">
-        {filteredTasks.map((task) => (
+        {visibleTasks.map((task) => (
           <div key={task.id} className="task-card-wrapper" data-task-id={task.id}>
             <TaskCard
               task={task}
@@ -314,6 +323,13 @@ export default function TaskGrid() {
           </div>
         ))}
       </div>
+      {pageCount > 1 && (
+        <nav aria-label="任务分页" data-no-drag-select className="flex items-center justify-center gap-4 py-4 text-sm">
+          <button type="button" className="rounded border px-3 py-2 disabled:opacity-40" disabled={currentPage === 0} onClick={() => { setPage(currentPage - 1); rootRef.current?.scrollIntoView({ block: 'start' }) }}>上一页</button>
+          <span>第 {currentPage + 1} / {pageCount} 页 · 共 {filteredTasks.length} 个任务</span>
+          <button type="button" className="rounded border px-3 py-2 disabled:opacity-40" disabled={currentPage >= pageCount - 1} onClick={() => { setPage(currentPage + 1); rootRef.current?.scrollIntoView({ block: 'start' }) }}>下一页</button>
+        </nav>
+      )}
       {selectionBox && (
         <div
           className="fixed bg-blue-500/20 border border-blue-500/50 pointer-events-none z-[30]"

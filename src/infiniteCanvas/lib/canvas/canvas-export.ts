@@ -6,16 +6,19 @@ import { getImageBlob } from "@canvas/services/image-storage";
 import type { CanvasExportAsset, CanvasExportFile } from "@canvas/types/canvas-export";
 import type { CanvasProject } from "@canvas/stores/canvas/use-canvas-store";
 import { CanvasNodeType, type CanvasNodeData } from "@canvas/types/canvas";
+import { collectStorageKeys } from "../../../lib/storageReferences";
+import { readDirectAgentConversations } from "@canvas/services/agent-chat-storage";
+import { useAgentStore } from "@canvas/stores/use-agent-store";
 
-export async function exportCanvasProjects(projects: CanvasProject[], fileName = "无限画布") {
+export async function exportCanvasProjects(projects: CanvasProject[], fileName = "无限画布", includeAgent = false) {
     const zipFiles: { name: string; data: BlobPart }[] = [];
     const exportedProjects = await Promise.all(
         projects.map(async (project) => {
             const files: CanvasExportAsset[] = [];
             await Promise.all(
-                collectStorageKeys(project).map(async (storageKey) => {
+                Array.from(collectStorageKeys(project)).map(async (storageKey) => {
                     const blob = storageKey.startsWith("image:") ? await getImageBlob(storageKey) : await getMediaBlob(storageKey);
-                    if (!blob) return;
+                    if (!blob) throw new Error(`导出失败：资源 ${storageKey} 已丢失`);
                     const path = `projects/${project.id}/files/${safeFileName(storageKey)}.${fileExtension(blob.type, storageKey)}`;
                     files.push({ storageKey, path, mimeType: blob.type || "application/octet-stream", bytes: blob.size });
                     zipFiles.push({ name: path, data: blob });
@@ -26,6 +29,10 @@ export async function exportCanvasProjects(projects: CanvasProject[], fileName =
     );
 
     const data: CanvasExportFile = { app: "infinite-canvas", version: 3, exportedAt: new Date().toISOString(), projects: exportedProjects };
+    if (includeAgent) {
+        const agent = useAgentStore.getState();
+        data.agentConversations = agent.directConversationsLoaded ? agent.directConversations : await readDirectAgentConversations();
+    }
     const zip = await createZip([{ name: "projects.json", data: JSON.stringify(data, null, 2) }, ...zipFiles]);
     saveAs(zip, `${safeFileName(fileName)}.zip`);
 }
@@ -61,13 +68,6 @@ export async function exportCanvasNodes(nodes: CanvasNodeData[], fileName = "画
 
     const zip = await createZip(zipFiles);
     saveAs(zip, `${safeFileName(fileName)}.zip`);
-}
-
-function collectStorageKeys(value: unknown, keys = new Set<string>()) {
-    if (!value || typeof value !== "object") return [...keys];
-    if ("storageKey" in value && typeof value.storageKey === "string" && value.storageKey.includes(":")) keys.add(value.storageKey);
-    Object.values(value).forEach((item) => (Array.isArray(item) ? item.forEach((child) => collectStorageKeys(child, keys)) : collectStorageKeys(item, keys)));
-    return [...keys];
 }
 
 function safeFileName(value: string) {

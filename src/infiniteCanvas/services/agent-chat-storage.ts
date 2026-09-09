@@ -23,6 +23,8 @@ const store = localforage.createInstance({ name: "infinite-canvas", storeName: "
 const mutations = new Map<string, Promise<void>>();
 const directConversationsKey = "direct:conversations:v1";
 const directConversationsMutationKey = "direct:conversations";
+let pendingDirectConversations: StoredDirectAgentConversation[] | null = null;
+let directSave: Promise<void> | null = null;
 const indexKey = (threadId: string) => `thread:${threadId}`;
 const messageKey = (threadId: string, messageId: string) => `message:${threadId}:${messageId}`;
 const pendingKey = (messageId: string) => `pending:${messageId}`;
@@ -101,6 +103,7 @@ export async function deleteAgentThreadMessages(threadIds: string[]) {
 }
 
 export async function readDirectAgentConversations() {
+    await directSave?.catch(() => undefined);
     await mutations.get(directConversationsMutationKey)?.catch(() => undefined);
     const conversations = await store.getItem<unknown>(directConversationsKey);
     if (!Array.isArray(conversations)) return [];
@@ -115,15 +118,28 @@ export async function readDirectAgentConversations() {
 }
 
 export async function saveDirectAgentConversations(conversations: StoredDirectAgentConversation[]) {
-    await mutateScopes([directConversationsMutationKey], async () => {
-        await store.setItem(directConversationsKey, conversations.map((conversation) => ({
-            ...conversation,
-            title: normalizeDirectConversationText(conversation.title, "新对话"),
-            activity: normalizeDirectConversationText(conversation.activity, "就绪"),
-            attachments: persistAttachments(conversation.attachments),
-            messages: conversation.messages.map((message) => ({ ...message, attachments: persistAttachments(message.attachments) })),
-        })));
+    pendingDirectConversations = conversations;
+    if (directSave) return directSave;
+    directSave = mutateScopes([directConversationsMutationKey], async () => {
+        while (pendingDirectConversations) {
+            const current = pendingDirectConversations;
+            await store.setItem(directConversationsKey, current.map((conversation) => ({
+                ...conversation,
+                title: normalizeDirectConversationText(conversation.title, "新对话"),
+                activity: normalizeDirectConversationText(conversation.activity, "就绪"),
+                attachments: persistAttachments(conversation.attachments),
+                messages: conversation.messages.map((message) => ({ ...message, attachments: persistAttachments(message.attachments) })),
+            })));
+            if (pendingDirectConversations === current) pendingDirectConversations = null;
+        }
+    }).then(async () => {
+        directSave = null;
+        if (pendingDirectConversations) await saveDirectAgentConversations(pendingDirectConversations);
+    }, (error) => {
+        directSave = null;
+        throw error;
     });
+    return directSave;
 }
 
 async function saveThreadAgentUserMessage(threadId: string, message: StoredAgentUserMessage) {

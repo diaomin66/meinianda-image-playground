@@ -31,5 +31,7 @@ describe('canvas Agent bridge', () => {
     expect(isExecutableCanvasAgentOp({ type: 'set_viewport', viewport: { x: 0, y: 0 } })).toBe(false)
     expect(isExecutableCanvasAgentOp({ type: 'add_node' })).toBe(true)
     expect(isExecutableCanvasAgentOp({ type: 'run_generation', nodeId: 'target' })).toBe(true)
+    expect(isExecutableCanvasAgentOp({ type: 'select_nodes', ids: [] })).toBe(true)
+    expect(isExecutableCanvasAgentOp({ type: 'select_nodes', ids: ['target', null] })).toBe(false)
   })
 })

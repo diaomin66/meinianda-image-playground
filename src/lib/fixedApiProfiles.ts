@@ -9,6 +9,7 @@ import {
   GEMINI_FLASH_IMAGE_MODEL,
   GEMINI_PRO_IMAGE_MODEL,
   isGeminiImageModel,
+  isGptImageModel,
 } from './imageModels'
 
 export const FIXED_API_BASE_URL = 'https://meinianda.top/v1'
@@ -35,6 +36,10 @@ function getFixedResponsesModel(input: Partial<AppSettings> | unknown) {
 export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSettings {
   const settings = normalizeSettings(input)
   const imageApiKey = getProfileApiKey(settings.profiles, FIXED_IMAGE_PROFILE_ID, 'images') ?? settings.apiKey
+  const existingImageProfile = settings.profiles.find((profile) => profile.id === FIXED_IMAGE_PROFILE_ID)
+  const imageModel = existingImageProfile && isGptImageModel(existingImageProfile.model)
+    ? existingImageProfile.model
+    : DEFAULT_IMAGES_MODEL
   const existingGeminiProfile = settings.profiles.find((profile) => profile.id === FIXED_GEMINI_PROFILE_ID)
   const geminiApiKey = existingGeminiProfile?.apiKey ?? settings.profiles.find((profile) => profile.provider === 'gemini')?.apiKey ?? imageApiKey
   const geminiModel = existingGeminiProfile && isGeminiImageModel(existingGeminiProfile.model)
@@ -52,7 +57,7 @@ export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSetti
       provider: 'openai',
       baseUrl: FIXED_API_BASE_URL,
       apiKey: imageApiKey,
-      model: DEFAULT_IMAGES_MODEL,
+      model: imageModel,
       timeout: DEFAULT_API_TIMEOUT,
       apiMode: 'images',
       codexCli: false,
@@ -94,7 +99,7 @@ export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSetti
     ...settings,
     baseUrl: FIXED_API_BASE_URL,
     apiKey: imageApiKey,
-    model: DEFAULT_IMAGES_MODEL,
+    model: imageModel,
     timeout: DEFAULT_API_TIMEOUT,
     apiMode: 'images',
     codexCli: false,

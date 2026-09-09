@@ -1,10 +1,9 @@
-import { useLayoutEffect, useState } from 'react'
+import { lazy, Suspense, useLayoutEffect, useState } from 'react'
 import { App, ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import CanvasPage from './pages/canvas'
-import CanvasProjectPage from './pages/canvas/project'
 import CanvasAgentPanelHost from './CanvasAgentPanelHost'
 import { ClientRootInit } from './components/layout/client-root-init'
 import { getAntThemeConfig } from './lib/app-theme'
@@ -24,6 +23,13 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+const CanvasProjectPage = lazy(() => import('./pages/canvas/project'))
+
+function CanvasProjectRoute() {
+  const params = useParams()
+  return <Suspense fallback={<div className="p-6" role="status">正在加载画布…</div>}><CanvasProjectPage key={params.id} /></Suspense>
+}
 
 export default function InfiniteCanvasModule() {
   const theme = useThemeStore((state) => state.theme)
@@ -76,7 +82,7 @@ export default function InfiniteCanvasModule() {
                       <Routes>
                         <Route path="/" element={<Navigate to="/canvas" replace />} />
                         <Route path="/canvas" element={<CanvasPage />} />
-                        <Route path="/canvas/:id" element={<CanvasProjectPage />} />
+                        <Route path="/canvas/:id" element={<CanvasProjectRoute />} />
                         <Route path="*" element={<Navigate to="/canvas" replace />} />
                       </Routes>
                     </div>

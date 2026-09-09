@@ -1,3 +1,4 @@
+import { forwardAbort } from './abort'
 import type { ApiProfile, TaskParams } from '../types'
 import { convertImageDataUrlFormat } from './canvasImage'
 import { buildApiUrl, readClientDevProxyConfig, shouldUseApiProxy } from './devProxy'
@@ -145,6 +146,7 @@ async function callGeminiImageApiSingle(
   const proxyConfig = readClientDevProxyConfig()
   const useApiProxy = shouldUseApiProxy(profile.apiProxy, proxyConfig)
   const controller = new AbortController()
+  const detachAbort = forwardAbort(opts.signal, controller)
   const timeoutId = setTimeout(() => controller.abort(), profile.timeout * 1000)
 
   try {
@@ -184,6 +186,7 @@ async function callGeminiImageApiSingle(
       actualParamsList: images.map(() => actualParams),
     }
   } finally {
+    detachAbort()
     clearTimeout(timeoutId)
   }
 }

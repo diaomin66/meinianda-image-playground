@@ -126,7 +126,7 @@ export interface TaskParams {
   size: string
   aspect_ratio: 'auto' | '1:1' | '1:4' | '1:8' | '2:3' | '3:2' | '3:4' | '4:1' | '4:3' | '4:5' | '5:4' | '8:1' | '9:16' | '16:9' | '21:9'
   thinking_level: 'minimal' | 'high'
-  quality: 'auto' | 'low' | 'medium' | 'high'
+  quality: 'auto' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
   background: 'auto' | 'opaque' | 'transparent'
   output_format: 'png' | 'jpeg' | 'webp'
   output_compression: number | null

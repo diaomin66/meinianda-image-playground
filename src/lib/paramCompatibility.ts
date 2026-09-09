@@ -7,6 +7,7 @@ import {
   GEMINI_FLASH_IMAGE_SIZES,
   GEMINI_PRO_IMAGE_SIZES,
   GEMINI_STANDARD_ASPECT_RATIOS,
+  getImageQualityOptions,
 } from './imageModels'
 import { normalizeCodexCliImageSize, normalizeImageSize } from './size'
 
@@ -36,6 +37,11 @@ export function normalizeParamsForSettings(
       ? DEFAULT_GPT_IMAGE_SIZE
       : normalizedSize || DEFAULT_PARAMS.size,
     n: Math.min(outputImageLimit, Math.max(1, params.n || DEFAULT_PARAMS.n)),
+  }
+
+  const qualityOptions = getImageQualityOptions(activeProfile)
+  if (!qualityOptions.includes(nextParams.quality)) {
+    nextParams.quality = qualityOptions.includes('high') ? 'high' : 'auto'
   }
 
   if (activeProfile.provider === 'openai' && activeProfile.codexCli) {

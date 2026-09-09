@@ -2,6 +2,8 @@ import localforage from "localforage";
 
 import { nanoid } from "nanoid";
 import { readImageMeta } from "@canvas/lib/image-utils";
+import { collectStorageKeys } from "../../lib/storageReferences";
+import { blobToDataUrl } from "../../lib/dataUrl";
 
 export type UploadedImage = {
     url: string;
@@ -11,6 +13,7 @@ export type UploadedImage = {
     height: number;
     bytes: number;
     mimeType: string;
+    transparentOriginalStorageKey?: string;
 };
 
 const store = localforage.createInstance({ name: "infinite-canvas", storeName: "image_files" });
@@ -52,16 +55,41 @@ export async function getImageBlob(storageKey: string): Promise<Blob | null> {
 }
 
 export async function setImageBlob(storageKey: string, blob: Blob) {
-    await persistImageBlob(storageKey, blob);
+    if (await persistImageBlob(storageKey, blob) === "memory") throw new Error("图片存储空间不足，无法持久保存");
+    const previous = objectUrls.get(storageKey);
+    if (previous) URL.revokeObjectURL(previous);
     const url = URL.createObjectURL(blob);
     objectUrls.set(storageKey, url);
     return url;
 }
 
-export async function imageToDataUrl(image: { url?: string; dataUrl?: string; storageKey?: string }) {
-    const url = image.dataUrl || (await resolveImageUrl(image.storageKey, image.url || ""));
-    if (!url || url.startsWith("data:")) return url;
-    return blobToDataUrl(await (await fetch(url)).blob());
+export async function imageToDataUrl(image: { url?: string; dataUrl?: string; storageKey?: string }, signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    const url = image.storageKey ? await resolveImageUrl(image.storageKey, image.dataUrl || image.url || "") : image.dataUrl || image.url || "";
+    if (!url) throw new Error("参考图片已丢失，无法继续生成");
+    if (url.startsWith("data:")) return url;
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error(`参考图片读取失败：HTTP ${response.status}`);
+    return blobToDataUrl(await response.blob());
+}
+
+export async function uploadGeneratedImage(image: { dataUrl: string; originalDataUrl?: string }, signal: AbortSignal): Promise<UploadedImage> {
+    signal.throwIfAborted();
+    const uploaded = await uploadImage(image.dataUrl);
+    const created = uploaded.storageKey ? [uploaded.storageKey] : [];
+    try {
+        signal.throwIfAborted();
+        if (image.originalDataUrl) {
+            const original = await uploadImage(image.originalDataUrl);
+            if (original.storageKey) created.push(original.storageKey);
+            uploaded.transparentOriginalStorageKey = original.storageKey;
+        }
+        signal.throwIfAborted();
+        return uploaded;
+    } catch (error) {
+        await deleteStoredImages(created);
+        throw error;
+    }
 }
 
 export async function deleteStoredImages(keys: Iterable<string>) {
@@ -103,9 +131,9 @@ export async function cleanupUnusedImages(usedData: unknown) {
 }
 
 export function collectImageStorageKeys(value: unknown, keys = new Set<string>()) {
-    if (!value || typeof value !== "object") return keys;
-    if ("storageKey" in value && typeof value.storageKey === "string" && value.storageKey.startsWith("image:")) keys.add(value.storageKey);
-    Object.values(value).forEach((item) => (Array.isArray(item) ? item.forEach((child) => collectImageStorageKeys(child, keys)) : collectImageStorageKeys(item, keys)));
+    for (const key of collectStorageKeys(value)) {
+        if (key.startsWith("image:")) keys.add(key);
+    }
     return keys;
 }
 
@@ -164,13 +192,4 @@ function notifyMemoryFallback() {
     if (now - lastFallbackNotice < 5000) return;
     lastFallbackNotice = now;
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(CANVAS_IMAGE_STORAGE_FALLBACK_EVENT));
-}
-
-function blobToDataUrl(blob: Blob) {
-    return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ""));
-        reader.onerror = () => reject(new Error("读取图片失败"));
-        reader.readAsDataURL(blob);
-    });
 }
