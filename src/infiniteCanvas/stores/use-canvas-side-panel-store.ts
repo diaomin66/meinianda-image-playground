@@ -1,6 +1,8 @@
 import { create } from "zustand";
+import { MOTION_DURATION } from "../../lib/motion";
 
-export const CANVAS_SIDE_PANEL_MOTION_MS = 500;
+export const CANVAS_SIDE_PANEL_MOTION_MS = MOTION_DURATION.panel;
+let closeTimer: ReturnType<typeof setTimeout> | undefined;
 export const CANVAS_SIDE_PANEL_MIN_WIDTH = 220;
 export const CANVAS_SIDE_PANEL_MAX_WIDTH = 480;
 export const CANVAS_SIDE_PANEL_DEFAULT_WIDTH = 280;
@@ -39,14 +41,16 @@ export const useCanvasSidePanelStore = create<CanvasSidePanelStore>((set, get) =
     panelClosing: false,
     setWidth: (width) => set({ width }),
     openPanel: () => {
+        clearTimeout(closeTimer);
         if (typeof window !== "undefined") localStorage.setItem(OPEN_KEY, "1");
         set({ panelOpen: true, panelMounted: true, panelClosing: false });
     },
     closePanel: () => {
         if (!get().panelMounted || get().panelClosing) return;
+        clearTimeout(closeTimer);
         if (typeof window !== "undefined") localStorage.setItem(OPEN_KEY, "0");
         set({ panelOpen: false, panelClosing: true });
-        setTimeout(() => {
+        closeTimer = setTimeout(() => {
             if (get().panelClosing) set({ panelMounted: false, panelClosing: false });
         }, CANVAS_SIDE_PANEL_MOTION_MS);
     },

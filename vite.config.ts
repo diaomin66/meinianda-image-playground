@@ -21,7 +21,7 @@ function loadDevProxyConfig() {
   }
 }
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   const devProxyConfig = command === 'serve' ? loadDevProxyConfig() : null
 
   return {
@@ -37,11 +37,34 @@ export default defineConfig(({ command }) => {
       __CANVAS_APP_VERSION__: JSON.stringify(canvasVersion),
       __CANVAS_APP_RELEASES__: JSON.stringify(canvasReleases),
       __DEV_PROXY_CONFIG__: JSON.stringify(devProxyConfig),
+      __LOCAL_API_RELAY__: command === 'serve' && mode !== 'test',
     },
     server: {
       host: true,
-      proxy:
-        devProxyConfig?.enabled
+      proxy: {
+        // 本地同源转发固定服务商，保留 v1/v1beta；不开放任意目标地址，也不重试生成请求。
+        '/__local-api': {
+          target: 'https://meinianda.top',
+          changeOrigin: true,
+          secure: true,
+          timeout: 600000,
+          proxyTimeout: 600000,
+          rewrite: (path) => path.replace(/^\/__local-api(?=\/)/, ''),
+          configure: (proxy) => {
+            proxy.on('error', (err, _req, res) => {
+              if (!('writeHead' in res) || res.writableEnded) return
+              if (res.headersSent) { res.destroy(); return }
+              res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+              res.end(JSON.stringify({ error: { message: '本地转发未能收到服务商的完整响应；服务端可能仍在处理，请先核对后台结果再重试。', code: (err as NodeJS.ErrnoException).code || 'UPSTREAM_CONNECTION_ERROR' } }))
+            })
+            // 上游已返回 200 后断流也必须结束本地响应，避免浏览器一直等到超时。
+            proxy.on('proxyRes', (upstream, _req, res) => {
+              upstream.on('aborted', () => res.destroy())
+              upstream.on('error', () => res.destroy())
+            })
+          },
+        },
+        ...(devProxyConfig?.enabled
           ? {
               [devProxyConfig.prefix]: {
                 target: devProxyConfig.target,
@@ -54,7 +77,8 @@ export default defineConfig(({ command }) => {
                   ),
               },
             }
-          : undefined,
+          : {}),
+      },
     },
   }
 })

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 
+import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion'
 import { DirectAgentPanel } from './direct-agent-panel'
 import { canvasThemes } from '@canvas/lib/canvas-theme'
 import { CANVAS_AGENT_PANEL_MOTION_MS, useAgentStore } from '@canvas/stores/use-agent-store'
@@ -29,6 +30,7 @@ export function getCanvasAgentPanelLayout(viewportWidth: number, count: number, 
 }
 
 export function AgentPanel() {
+  const reducedMotion = usePrefersReducedMotion()
   const theme = canvasThemes[useThemeStore((state) => state.theme)]
   const width = useAgentStore((state) => state.width)
   const panelMounted = useAgentStore((state) => state.panelMounted)
@@ -105,7 +107,8 @@ export function AgentPanel() {
       className={`canvas-agent-panel relative z-[70] flex h-full shrink-0 ${layout.compact ? 'canvas-agent-panel-compact' : ''}`}
       initial={{ width: 0, opacity: 0 }}
       animate={{ width: panelOpen ? layout.rackWidth : 0, opacity: panelOpen ? 1 : 0 }}
-      transition={{ duration: resizing ? 0 : PANEL_MOTION_SECONDS, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: resizing || reducedMotion ? 0 : PANEL_MOTION_SECONDS, ease: [0.22, 1, 0.36, 1] }}
+      inert={!panelOpen || panelClosing}
       style={{ overflow: 'clip', pointerEvents: panelOpen && !panelClosing ? undefined : 'none' }}
     >
       {panelOpen && !panelClosing && !layout.compact ? (
@@ -118,9 +121,9 @@ export function AgentPanel() {
       ) : null}
       <motion.div
         className="canvas-agent-panel-grid m-3 grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain"
-        initial={{ x: 32, scale: 0.985 }}
-        animate={{ x: panelClosing ? 20 : 0, scale: panelClosing ? 0.985 : 1 }}
-        transition={{ duration: resizing ? 0 : PANEL_MOTION_SECONDS, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ x: 12 }}
+        animate={{ x: panelClosing ? 8 : 0 }}
+        transition={{ duration: resizing || reducedMotion ? 0 : PANEL_MOTION_SECONDS, ease: [0.22, 1, 0.36, 1] }}
         style={{
           gridTemplateColumns: `repeat(${layout.columns}, minmax(0, ${layout.cardWidth}px))`,
           gridAutoRows: visibleConversationIds.length <= layout.columns ? 'minmax(0, 1fr)' : 'minmax(360px, 1fr)',
@@ -130,15 +133,14 @@ export function AgentPanel() {
         <AnimatePresence initial={false} mode="popLayout">
           {visibleConversationIds.map((conversationId) => (
             <motion.aside
-              layout
+              layout="position"
               key={conversationId}
               data-canvas-shortcuts-ignore
               data-focused={focusedConversationId === conversationId ? 'true' : 'false'}
               className="canvas-agent-panel-content relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border shadow-[0_18px_48px_rgba(24,24,27,.14)] backdrop-blur-md dark:shadow-[0_18px_48px_rgba(0,0,0,.4)]"
-              initial={{ opacity: 0, y: 20, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 14, scale: 0.97 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
               style={{
                 background: theme.node.panel,
                 borderColor: focusedConversationId === conversationId ? theme.node.activeStroke : theme.node.stroke,

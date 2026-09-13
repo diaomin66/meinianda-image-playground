@@ -35,6 +35,7 @@ import {
   DEFAULT_CUSTOM_PROVIDER_JSON,
 } from '../lib/settingsCustomProvider'
 import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
+import { useExitPresence } from '../hooks/useExitPresence'
 import { usePreventBackgroundScroll } from '../hooks/usePreventBackgroundScroll'
 import { DEFAULT_DROPDOWN_MAX_HEIGHT, getDropdownMaxHeight } from '../lib/dropdown'
 import Select from './Select'
@@ -43,6 +44,8 @@ import ViewportTooltip from './ViewportTooltip'
 import { ChevronDownIcon, CloseIcon, CopyIcon, PlusIcon, TrashIcon, ExportIcon, ImportIcon, DragHandleIcon, LinkIcon } from './icons'
 import GeneralSettingsTab from './settings/GeneralSettingsTab'
 import AgentSettingsTab from './settings/AgentSettingsTab'
+import CharacterSettingsTab from './settings/CharacterSettingsTab'
+import { useCharacterStore } from '../characterStore'
 import FixedApiSettingsTab from './settings/FixedApiSettingsTab'
 import CustomProviderModal from './settings/CustomProviderModal'
 import ProfileImportUrlModal, { type CopyImportUrlOptions } from './settings/ProfileImportUrlModal'
@@ -137,7 +140,7 @@ function isProfileApiProxyEligible(settings: AppSettings, profile: ApiProfile) {
   return !isAsyncCustomProvider(customProvider)
 }
 
-export default function SettingsModal() {
+export default function SettingsModal({ closing = false }: { closing?: boolean }) {
   const showSettings = useStore((s) => s.showSettings)
   const settingsTabRequest = useStore((s) => s.settingsTabRequest)
   const setShowSettings = useStore((s) => s.setShowSettings)
@@ -147,7 +150,8 @@ export default function SettingsModal() {
   const setReusedTaskApiProfile = useStore((s) => s.setReusedTaskApiProfile)
   const setConfirmDialog = useStore((s) => s.setConfirmDialog)
   const showToast = useStore((s) => s.showToast)
-  const hasRunningOperations = useStore((s) => hasActiveDataOperations(s.tasks, s.agentConversations))
+  const characterConversations = useCharacterStore((s) => s.conversations)
+  const hasRunningOperations = useStore((s) => hasActiveDataOperations(s.tasks, s.agentConversations, characterConversations))
   const importInputRef = useRef<HTMLInputElement>(null)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const profileMenuTriggerRef = useRef<HTMLButtonElement>(null)
@@ -164,6 +168,7 @@ export default function SettingsModal() {
   const [agentMaxToolRoundsInput, setAgentMaxToolRoundsInput] = useState(String(settings.agentMaxToolRounds))
   const [showApiKey, setShowApiKey] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const profileMenuPresence = useExitPresence(showProfileMenu ? true : null)
   const [profileMenuMaxHeight, setProfileMenuMaxHeight] = useState(DEFAULT_DROPDOWN_MAX_HEIGHT)
   const [showCustomProviderImport, setShowCustomProviderImport] = useState(false)
   const [showZipDownloadRouteManager, setShowZipDownloadRouteManager] = useState(false)
@@ -565,9 +570,11 @@ export default function SettingsModal() {
   }
 
   useCloseOnEscape(showSettings && !dataTransferMode, handleClose)
-  usePreventBackgroundScroll(showSettings, showZipDownloadRouteManager ? zipDownloadRouteScrollBoundaryRef : showCustomProviderImport ? customProviderScrollBoundaryRef : settingsScrollBoundaryRef)
-
-  if (!showSettings) return null
+  useCloseOnEscape(showProfileMenu, () => {
+    setShowProfileMenu(false)
+    profileMenuTriggerRef.current?.focus({ preventScroll: true })
+  })
+  usePreventBackgroundScroll(showSettings || closing, showZipDownloadRouteManager ? zipDownloadRouteScrollBoundaryRef : showCustomProviderImport ? customProviderScrollBoundaryRef : settingsScrollBoundaryRef)
 
   const handleExport = async () => {
     if (exportTasks && hasRunningOperations) {
@@ -995,6 +1002,8 @@ export default function SettingsModal() {
   return (
         <div
           data-no-drag-select
+          data-closing={closing}
+          inert={closing}
           className="fixed inset-0 z-[70] flex items-center justify-center p-4"
           onPointerDownCapture={blockDataTransferInteraction}
           onClickCapture={blockDataTransferClick}
@@ -1071,6 +1080,13 @@ export default function SettingsModal() {
                 </svg>
                 数据管理
               </button>
+              <button
+                onClick={() => setActiveTab('characters')}
+                className={`whitespace-nowrap flex-shrink-0 flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-xl transition-colors ${activeTab === 'characters' ? 'bg-white dark:bg-white/[0.08] shadow-sm text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/[0.04]'}`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0114 0v2" /></svg>
+                人物配置（beta）
+              </button>
             </nav>
           </div>
 
@@ -1087,6 +1103,7 @@ export default function SettingsModal() {
               />
             )}
 
+            {activeTab === 'characters' && <CharacterSettingsTab draft={draft} commitSettings={commitSettings} />}
             {activeTab === 'agent' && (
               <AgentSettingsTab
                 draft={draft}
@@ -1169,7 +1186,8 @@ export default function SettingsModal() {
                         setShowProfileMenu(!showProfileMenu)
                       }}
                       disabled={defaultConfigOnly}
-                      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2 text-sm text-gray-700 outline-none transition dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 ${defaultConfigOnly ? 'cursor-not-allowed opacity-70' : 'hover:bg-gray-50 dark:hover:bg-white/[0.06]'}`}
+                      aria-expanded={showProfileMenu}
+                      className={`menu-trigger flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2 text-sm text-gray-700 outline-none transition dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 ${defaultConfigOnly ? 'cursor-not-allowed opacity-70' : 'hover:bg-gray-50 dark:hover:bg-white/[0.06]'}`}
                       title={activeProfile.name}
                     >
                       <span className="flex min-w-0 items-center gap-2">
@@ -1181,10 +1199,12 @@ export default function SettingsModal() {
                       <ChevronDownIcon className={`w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
                     </button>
                     
-                    {showProfileMenu && !defaultConfigOnly && (
+                    {profileMenuPresence.value && !defaultConfigOnly && (
                       <>
                         <div
-                          className="absolute right-0 top-full z-50 mt-1.5 w-full overflow-hidden overflow-y-auto rounded-xl border border-gray-200/60 bg-white/95 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-xl animate-dropdown-down dark:border-white/[0.08] dark:bg-gray-900/95 dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] dark:ring-white/10 custom-scrollbar"
+                          data-closing={profileMenuPresence.closing}
+                          inert={profileMenuPresence.closing}
+                          className="menu-surface menu-motion absolute right-0 top-full z-50 mt-2 w-full overflow-y-auto p-1.5 custom-scrollbar"
                           style={{ maxHeight: profileMenuMaxHeight }}
                         >
                           <button
@@ -1193,7 +1213,8 @@ export default function SettingsModal() {
                               e.preventDefault()
                               createNewProfile()
                             }}
-                            className="flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
+                            data-variant="action"
+                            className="menu-item flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left text-xs font-medium"
                           >
                             <span className="truncate font-semibold">创建新配置</span>
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center">
@@ -1205,6 +1226,7 @@ export default function SettingsModal() {
                               <div
                                 key={profile.id}
                                 data-profile-id={profile.id}
+                                data-selected={profile.id === activeProfile.id}
                                 title={profile.name}
                                 draggable
                                 onDragStart={(e) => handleProfileDragStart(e, profile.id)}
@@ -1221,7 +1243,7 @@ export default function SettingsModal() {
                                   e.preventDefault()
                                   switchProfile(profile.id)
                                 }}
-                                className={`relative group flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs transition-colors ${draggedProfileId === profile.id ? 'opacity-40 bg-gray-100 dark:bg-white/[0.04]' : profile.id === activeProfile.id ? 'bg-blue-50 font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.06]'}`}
+                                className={`menu-item relative group flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs ${draggedProfileId === profile.id ? 'opacity-40' : ''}`}
                               >
                                 {dragOverProfileId === profile.id && dragDropPosition === 'before' && draggedProfileId !== profile.id && (
                                   <div className="absolute -top-[1px] left-0 right-0 h-[2px] bg-blue-500 rounded-full z-40 shadow-sm pointer-events-none" />
@@ -1602,7 +1624,7 @@ export default function SettingsModal() {
                     <ExportIcon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                     <h4 className="text-sm font-bold text-gray-800 dark:text-gray-100">导出数据</h4>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">此处备份画廊任务、全局 Agent 和所选配置；无限画布及 Canvas Agent 请在画布库使用「全部导出（含 Agent）」。过大的备份会自动分片，请允许下载多个文件。</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">此处备份画廊任务、全局 Agent、人物资料与聊天图片，以及所选配置；无限画布及 Canvas Agent 请在画布库使用「全部导出（含 Agent）」。过大的备份会自动分片，请允许下载多个文件。</p>
                   <div className="flex flex-wrap gap-x-6 gap-y-3">
                     <Checkbox
                       checked={exportConfig}

@@ -561,7 +561,13 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
         formData.append('mask', maskBlob, 'mask.png')
       }
 
-      response = await fetch(buildApiUrl(profile.baseUrl, paths.editPath, proxyConfig, useApiProxy), {
+      const url = buildApiUrl(profile.baseUrl, paths.editPath, proxyConfig, useApiProxy)
+      if (opts.onRequest) {
+        const fields: unknown[] = []
+        formData.forEach((value, name) => fields.push({ name, value: typeof value === 'string' ? value : { type: value.type, size: value.size, name: value.name } }))
+        opts.onRequest(url, { formData: fields })
+      }
+      response = await fetch(url, {
         method: 'POST',
         headers: requestHeaders,
         cache: 'no-store',
@@ -599,7 +605,9 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
         body.partial_images = getStreamPartialImages(profile)
       }
 
-      response = await fetch(buildApiUrl(profile.baseUrl, paths.generationPath, proxyConfig, useApiProxy), {
+      const url = buildApiUrl(profile.baseUrl, paths.generationPath, proxyConfig, useApiProxy)
+      opts.onRequest?.(url, body)
+      response = await fetch(url, {
         method: 'POST',
         headers: {
           ...requestHeaders,
@@ -1002,7 +1010,9 @@ async function callResponsesImageApiSingle(opts: CallApiOptions, profile: ApiPro
       body.stream = true
     }
 
-    const response = await fetch(buildApiUrl(profile.baseUrl, 'responses', proxyConfig, useApiProxy), {
+    const url = buildApiUrl(profile.baseUrl, 'responses', proxyConfig, useApiProxy)
+    opts.onRequest?.(url, body)
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         ...requestHeaders,

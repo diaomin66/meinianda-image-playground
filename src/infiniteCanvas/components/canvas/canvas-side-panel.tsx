@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Check, ChevronRight, Download, Eye, FileText, Image as ImageIcon, ListChecks, Music2, Plus, Search, Settings2, Square, Trash2, Type, Video } from "lucide-react";
 import { motion } from "motion/react";
 
+import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
 import { canvasThemes, type CanvasTheme } from "@canvas/lib/canvas-theme";
 import { exportCanvasNodes } from "@canvas/lib/canvas/canvas-export";
 import { getNodeDefinition } from "@canvas/lib/canvas/node-registry";
@@ -50,6 +51,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function CanvasSidePanel({ nodes, selectedNodeIds, onFocusNode, onPreviewNode, onInsertAsset }: Props) {
+    const reducedMotion = usePrefersReducedMotion();
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const [tab, setTab] = useState<PanelTab>("canvas");
     const width = useCanvasSidePanelStore((state) => state.width);
@@ -86,14 +88,15 @@ export function CanvasSidePanel({ nodes, selectedNodeIds, onFocusNode, onPreview
             className="canvas-workspace-side-panel relative z-[60] flex h-full shrink-0"
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: panelOpen ? width + 24 : 0, opacity: panelOpen ? 1 : 0 }}
-            transition={{ duration: resizing ? 0 : PANEL_MOTION_SECONDS, ease: PANEL_EASE }}
+            transition={{ duration: resizing || reducedMotion ? 0 : PANEL_MOTION_SECONDS, ease: PANEL_EASE }}
+            inert={!panelOpen || panelClosing}
             style={{ overflow: "clip", pointerEvents: panelClosing ? "none" : undefined }}
         >
             <motion.aside
                 className="canvas-workspace-side-panel-content relative m-3 flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border shadow-[0_18px_48px_rgba(24,24,27,.12)] backdrop-blur-md dark:shadow-[0_18px_48px_rgba(0,0,0,.36)]"
-                initial={{ x: -32, scale: 0.985 }}
-                animate={{ x: panelClosing ? -20 : 0, scale: panelClosing ? 0.985 : 1 }}
-                transition={{ duration: resizing ? 0 : PANEL_MOTION_SECONDS, ease: PANEL_EASE }}
+                initial={{ x: -12 }}
+                animate={{ x: panelClosing ? -8 : 0 }}
+                transition={{ duration: resizing || reducedMotion ? 0 : PANEL_MOTION_SECONDS, ease: PANEL_EASE }}
                 style={{ width, background: theme.toolbar.panel, borderColor: theme.toolbar.border, color: theme.node.text, transformOrigin: "left center" }}
                 data-canvas-no-zoom
             >
@@ -121,7 +124,7 @@ function TabButton({ label, active, theme, onClick }: { label: string; active: b
     return (
         <button type="button" onClick={onClick} className="relative flex min-h-10 w-full items-center justify-center whitespace-nowrap px-1 pb-1.5 text-sm font-semibold transition-opacity" style={{ color: theme.node.text, opacity: active ? 1 : 0.45 }}>
             {label}
-            {active ? <motion.span layoutId="sidePanelTabIndicator" className="absolute inset-x-0 -bottom-px h-0.5 rounded-full" style={{ background: theme.toolbar.activeText }} transition={{ type: "spring", stiffness: 500, damping: 34 }} /> : null}
+            {active ? <motion.span layoutId="sidePanelTabIndicator" className="absolute inset-x-0 -bottom-px h-0.5 rounded-full" style={{ background: theme.toolbar.activeText }} /> : null}
         </button>
     );
 }

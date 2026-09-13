@@ -17,6 +17,8 @@ export const FIXED_GEMINI_API_BASE_URL = 'https://meinianda.top/v1beta'
 export const FIXED_IMAGE_PROFILE_ID = 'fixed-images'
 export const FIXED_GEMINI_PROFILE_ID = 'fixed-gemini'
 export const FIXED_RESPONSES_PROFILE_ID = 'fixed-responses'
+export const FIXED_GEMINI_TEXT_PROFILE_ID = 'fixed-gemini-text'
+export const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-3.1-pro-preview'
 
 function getProfileApiKey(profiles: ApiProfile[], id: string, mode: ApiMode) {
   const exactProfile = profiles.find((profile) => profile.id === id)
@@ -47,6 +49,7 @@ export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSetti
     : GEMINI_FLASH_IMAGE_MODEL
   const responsesModel = getFixedResponsesModel(input)
   const responsesApiKey = getProfileApiKey(settings.profiles, FIXED_RESPONSES_PROFILE_ID, 'responses') ?? imageApiKey
+  const geminiTextProfile = settings.profiles.find((profile) => profile.id === FIXED_GEMINI_TEXT_PROFILE_ID)
   const activeProfileId = settings.activeProfileId === FIXED_GEMINI_PROFILE_ID
     ? FIXED_GEMINI_PROFILE_ID
     : FIXED_IMAGE_PROFILE_ID
@@ -92,6 +95,19 @@ export function lockApiSettings(input: Partial<AppSettings> | unknown): AppSetti
       apiProxy: false,
       streamImages: true,
       streamPartialImages: DEFAULT_STREAM_PARTIAL_IMAGES,
+    },
+    {
+      id: FIXED_GEMINI_TEXT_PROFILE_ID,
+      name: 'Gemini 语言',
+      provider: 'gemini',
+      baseUrl: FIXED_GEMINI_API_BASE_URL,
+      apiKey: geminiTextProfile?.apiKey ?? geminiApiKey,
+      model: geminiTextProfile?.model || DEFAULT_GEMINI_TEXT_MODEL,
+      timeout: DEFAULT_API_TIMEOUT,
+      apiMode: 'generateContent',
+      codexCli: false,
+      apiProxy: false,
+      streamImages: false,
     },
   ]
 

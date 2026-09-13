@@ -36,6 +36,20 @@ describe('parseBatchImageCallArguments', () => {
 })
 
 describe('callAgentResponsesApi', () => {
+  it('人物可覆盖指令和工具，普通 Agent 仍使用原有默认规则', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: '你好' }] }] }), { status: 200 }))
+    const profile = createDefaultOpenAIProfile({ apiKey: 'test-key', apiMode: 'responses' })
+    await callAgentResponsesApi({ settings: DEFAULT_SETTINGS, profile, params: DEFAULT_PARAMS, input: '你好', instructions: '人物聊天规则', tools: [] })
+    const custom = JSON.parse(String(fetchMock.mock.calls[0][1]?.body))
+    expect(custom.instructions).toBe('人物聊天规则')
+    expect(custom.tools).toEqual([])
+    expect(custom.parallel_tool_calls).toBe(false)
+    await callAgentResponsesApi({ settings: DEFAULT_SETTINGS, profile, params: DEFAULT_PARAMS, input: '你好' })
+    const original = JSON.parse(String(fetchMock.mock.calls[1][1]?.body))
+    expect(original.instructions).toContain('Only generate when explicitly requested')
+    expect(original.tools.length).toBeGreaterThan(0)
+    expect(original.parallel_tool_calls).toBeUndefined()
+  })
   afterEach(() => {
     vi.restoreAllMocks()
   })

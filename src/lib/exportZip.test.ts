@@ -4,6 +4,22 @@ import type { AppSettings, StoredImage, StoredImageThumbnail, TaskParams, TaskRe
 import { buildExportZip, getExportImageEstimatedBytes, getExportZipPlan, readExportZip, readExportZipFileAsDataUrl } from './exportZip'
 
 describe('exportZip', () => {
+  it('人物资料与对话随任务备份导出，配置备份不包含人物内容', async () => {
+    const characterData = {
+      characters: [{ id: 'lin', name: '林夏', personality: '摄影师', appearance: '', opening: '', referenceImageIds: ['face'], autoImages: true, createdAt: 1, updatedAt: 1 }],
+      conversations: [{ id: 'chat', characterId: 'lin', title: '你好', messages: [], createdAt: 1, updatedAt: 1 }],
+    }
+    const params = {
+      exportedAt: 1700000000000, settings: {} as AppSettings, tasks: [], images: [], thumbnailsByImageId: new Map(),
+      favoriteCollections: [], defaultFavoriteCollectionId: null, agentConversations: [], characterData,
+    }
+    const backup = await buildExportZip({ ...params, options: { exportTasks: true } })
+    expect((await readExportZip(backup.bytes)).manifest.characterData).toEqual(characterData)
+    const config = await buildExportZip({ ...params, options: { exportConfig: true } })
+    expect((await readExportZip(config.bytes)).manifest.characterData).toBeUndefined()
+    const laterPart = await buildExportZip({ ...params, options: { exportTasks: true }, includeManifestData: false })
+    expect(laterPart.manifest.characterData).toBeUndefined()
+  })
   it('builds and reads backup zip entries without changing manifest shape', async () => {
     const task: TaskRecord = {
       id: 'task-1',

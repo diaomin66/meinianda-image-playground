@@ -2,6 +2,8 @@ export interface ReadJsonServerSentEventsOptions {
   signals?: Array<AbortSignal | undefined>
   formatErrorMessage?: (message: string) => string
   getEventErrorMessage?: (event: Record<string, unknown>) => string | null
+  onDone?: () => void
+  isComplete?: () => boolean
 }
 
 export function isEventStreamResponse(response: Response): boolean {
@@ -39,6 +41,7 @@ export async function readJsonServerSentEvents(
   const decoder = new TextDecoder()
   let buffer = ''
   let hasDataLine = false
+  let streamEnded = false
   const cancelReader = () => {
     void reader.cancel().catch(() => undefined)
   }
@@ -47,6 +50,12 @@ export async function readJsonServerSentEvents(
 
   const processBlock = async (block: string) => {
     if (block.split(/\r?\n/).some((line) => line.startsWith('data:'))) hasDataLine = true
+    if (block.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n') === '[DONE]') {
+      throwIfAborted(...signals)
+      streamEnded = true
+      options.onDone?.()
+      return
+    }
     const data = parseServerSentEventBlock(block)
     if (!data) return
 
@@ -64,6 +73,7 @@ export async function readJsonServerSentEvents(
     throwIfAborted(...signals)
     await onEvent(event as Record<string, unknown>)
     throwIfAborted(...signals)
+    if (options.isComplete?.()) streamEnded = true
   }
 
   try {
@@ -80,6 +90,7 @@ export async function readJsonServerSentEvents(
         const separator = buffer.match(/\r?\n\r?\n/)?.[0] ?? '\n\n'
         buffer = buffer.slice(separatorIndex + separator.length)
         await processBlock(block)
+        if (streamEnded) return
         separatorIndex = buffer.search(/\r?\n\r?\n/)
       }
     }
@@ -93,5 +104,6 @@ export async function readJsonServerSentEvents(
     }
   } finally {
     for (const signal of signals) signal?.removeEventListener('abort', cancelReader)
+    if (streamEnded) await reader.cancel().catch(() => undefined)
   }
 }

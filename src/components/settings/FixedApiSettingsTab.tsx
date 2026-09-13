@@ -6,6 +6,7 @@ import {
   FIXED_GEMINI_API_BASE_URL,
   FIXED_GEMINI_MODELS,
   FIXED_GEMINI_PROFILE_ID,
+  FIXED_GEMINI_TEXT_PROFILE_ID,
   FIXED_IMAGE_PROFILE_ID,
   FIXED_RESPONSES_PROFILE_ID,
 } from '../../lib/fixedApiProfiles'
@@ -36,6 +37,13 @@ const CONFIGURATIONS = [
     baseUrl: FIXED_API_BASE_URL,
     endpoint: 'Responses API (/v1/responses)',
     description: '用于 Agent 的语言理解与工具调用。',
+  },
+  {
+    id: FIXED_GEMINI_TEXT_PROFILE_ID,
+    title: 'Gemini 语言配置',
+    baseUrl: FIXED_GEMINI_API_BASE_URL,
+    endpoint: 'Gemini 原生 streamGenerateContent (SSE)',
+    description: '用于人物聊天与函数调用，在人物配置中选择并填写语言模型 ID。',
   },
 ] as const
 

@@ -52,7 +52,7 @@ export function CanvasGalleryImageModelPicker({ metadata, onConfigChange, classN
             <SelectTrigger className={`canvas-composer-model-picker h-10 w-full min-w-0 justify-start rounded-xl border border-input bg-transparent px-3 text-sm shadow-sm ${className || ""}`} title={selected?.label || "\u9009\u62e9\u6a21\u578b"} onMouseDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
                 <span className="min-w-0 flex-1 truncate text-left">{selected?.label || "\u9009\u62e9\u6a21\u578b"}</span>
             </SelectTrigger>
-            <SelectContent data-canvas-no-zoom className="z-[1200] w-80 max-w-[calc(100vw-24px)] rounded-xl border border-border/70 bg-popover p-1 shadow-xl" position="popper" align="start" side="bottom" sideOffset={6} onMouseDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+            <SelectContent data-canvas-no-zoom className="z-[1200] w-80 max-w-[calc(100vw-24px)]" position="popper" align="start" side="bottom" sideOffset={6} onMouseDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
                 {options.map((option) => <SelectItem key={option.value} value={option.value} textValue={option.label}><span className="block truncate">{option.label}</span></SelectItem>)}
             </SelectContent>
         </CanvasSelect>

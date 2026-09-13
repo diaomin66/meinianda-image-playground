@@ -4,6 +4,7 @@ declare const __APP_VERSION__: string
 declare const __CANVAS_APP_VERSION__: string
 declare const __CANVAS_APP_RELEASES__: import('./infiniteCanvas/lib/release').ReleaseInfo[]
 declare const __DEV_PROXY_CONFIG__: unknown
+declare const __LOCAL_API_RELAY__: boolean
 
 interface ImportMetaEnv {
   readonly VITE_DEFAULT_API_URL?: string

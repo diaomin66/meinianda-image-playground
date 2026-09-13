@@ -3,6 +3,7 @@ import { removeMultipleTasks, useStore } from '../store'
 import type { AgentConversation } from '../types'
 import { getAgentConversationTaskIds, getConversationSearchText } from '../lib/agentConversationState'
 import { useTooltip } from '../hooks/useTooltip'
+import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
 import { CloseIcon, EditIcon, TrashIcon } from './icons'
 import ViewportTooltip from './ViewportTooltip'
 
@@ -79,10 +80,12 @@ function formatDetailTime(value: number) {
 
 type HistoryModalProps = {
   onClose: () => void
+  closing?: boolean
   ignoreOutsideClickRef?: RefObject<HTMLElement | null>
 }
 
-export default function HistoryModal({ onClose, ignoreOutsideClickRef }: HistoryModalProps) {
+export default function HistoryModal({ onClose, ignoreOutsideClickRef, closing = false }: HistoryModalProps) {
+  useCloseOnEscape(!closing, onClose)
   const conversations = useStore((s) => s.agentConversations)
   const activeConversationId = useStore((s) => s.activeAgentConversationId)
   const setActiveConversationId = useStore((s) => s.setActiveAgentConversationId)
@@ -216,9 +219,11 @@ export default function HistoryModal({ onClose, ignoreOutsideClickRef }: History
   return (
     <div 
       ref={modalRef}
-      className="absolute top-12 left-0 w-80 sm:w-96 max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white dark:bg-[#1c1c1e] rounded-xl shadow-2xl overflow-hidden flex flex-col border border-gray-200 dark:border-white/10 z-50 text-gray-900 dark:text-gray-200 animate-dropdown-down"
+      data-closing={closing}
+      inert={closing}
+      className="menu-surface menu-motion absolute top-12 left-0 w-80 sm:w-96 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-hidden flex flex-col z-50"
     >
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-white/10 shrink-0">
+      <div className="m-2 mb-0 flex items-center justify-between rounded-xl bg-gray-100/70 p-2 dark:bg-white/5 shrink-0">
         <input 
           type="text" 
           placeholder="搜索聊天..." 

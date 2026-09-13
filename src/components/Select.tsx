@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { DEFAULT_DROPDOWN_MAX_HEIGHT } from '../lib/dropdown'
 import { ChevronDownIcon, EditIcon, PlusIcon, TrashIcon, DragHandleIcon } from './icons'
 import ViewportTooltip from './ViewportTooltip'
 import { useTooltip } from '../hooks/useTooltip'
+import { useExitPresence } from '../hooks/useExitPresence'
+import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
 
 interface Option {
   label: string
@@ -27,10 +29,15 @@ interface SelectProps {
   onOpenChange?: (isOpen: boolean) => void
   showValueTooltips?: boolean
   fitContent?: boolean
+  ariaLabel?: string
 }
 
-export default function Select({ value, onChange, onReorder, options, disabled, className, onOpenChange, showValueTooltips = false, fitContent = false }: SelectProps) {
+export default function Select({ value, onChange, onReorder, options, disabled, className, onOpenChange, showValueTooltips = false, fitContent = false, ariaLabel }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const presence = useExitPresence(isOpen ? true : null)
+  const menuId = useId()
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const [menuMaxHeight, setMenuMaxHeight] = useState(DEFAULT_DROPDOWN_MAX_HEIGHT)
   const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom')
   const [draggedValue, setDraggedValue] = useState<string | number | null>(null)
@@ -48,7 +55,11 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
   const touchDragRef = useRef<{ value: string | number, startX: number, startY: number, moved: boolean } | null>(null)
   const dragScrollIntervalRef = useRef<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  useCloseOnEscape(isOpen, () => {
+    setIsOpen(false)
+    triggerRef.current?.focus({ preventScroll: true })
+  })
 
   const triggerTooltip = useTooltip()
   const [hoveredOptionTooltip, setHoveredOptionTooltip] = useState<string | number | null>(null)
@@ -102,6 +113,7 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
   }, [touchDragPreview])
 
   useEffect(() => {
+    if (!isOpen) return
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false)
@@ -109,9 +121,9 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [isOpen])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) return
 
     const updateMenuMaxHeight = () => {
@@ -157,11 +169,19 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
     }
   }, [isOpen])
 
+  useLayoutEffect(() => {
+    const menu = menuRef.current
+    const option = menu?.children[activeIndex] as HTMLElement | undefined
+    if (!isOpen || !menu || !option) return
+    if (option.offsetTop < menu.scrollTop + 6) menu.scrollTop = option.offsetTop - 6
+    if (option.offsetTop + option.offsetHeight > menu.scrollTop + menu.clientHeight - 6) menu.scrollTop = option.offsetTop + option.offsetHeight - menu.clientHeight + 6
+  }, [isOpen, activeIndex])
+
   const handleToggle = (e: React.MouseEvent) => {
     if (disabled) return
     e.preventDefault()
     e.stopPropagation()
-    // 动画和位置的计算在 useEffect 中进行，这里可以先假设一个默认值或保留当前状态
+    if (!isOpen) setActiveIndex(Math.max(0, options.findIndex((o) => o.value === value)))
     setIsOpen(!isOpen)
   }
 
@@ -182,39 +202,87 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
   return (
     <div
       ref={containerRef}
-      className={fitContent ? 'relative max-w-full flex-none' : 'relative w-full'}
+      className={`${fitContent ? 'relative max-w-full flex-none' : 'relative w-full'} ${presence.value ? 'z-50' : ''}`}
+      onBlur={(e) => {
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setIsOpen(false)
+      }}
     >
-      <div
+      <button
         ref={triggerRef}
+        type="button"
+        role="combobox"
+        aria-label={ariaLabel}
+        aria-expanded={isOpen}
+        aria-controls={presence.value ? menuId : undefined}
+        aria-haspopup="listbox"
+        aria-activedescendant={isOpen && options[activeIndex] ? `${menuId}-${activeIndex}` : undefined}
+        disabled={disabled}
         {...(showValueTooltips ? triggerTooltip.handlers : {})}
+        onKeyDown={(e) => {
+          if (e.key === 'Tab') {
+            setIsOpen(false)
+            return
+          }
+          if (e.key === 'Escape' && isOpen) {
+            e.preventDefault()
+            e.stopPropagation()
+            setIsOpen(false)
+            return
+          }
+          if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+            e.preventDefault()
+            if (!options.length) return
+            const selected = Math.max(0, options.findIndex((o) => o.value === value))
+            setActiveIndex(e.key === 'Home' ? 0 : e.key === 'End' ? options.length - 1 : !isOpen ? selected : (activeIndex + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
+            setIsOpen(true)
+          }
+          if (isOpen && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault()
+            if (options[activeIndex]) onChange(options[activeIndex].value)
+            setIsOpen(false)
+          }
+        }}
         onClick={(e) => {
           if (showValueTooltips) triggerTooltip.handlers.onClick?.()
           handleToggle(e)
           triggerTooltip.dismiss()
         }}
-        className={`flex items-center justify-between gap-1 cursor-pointer select-none ${fitContent ? 'w-max max-w-full' : 'w-full'} ${className ?? ''} ${
+        className={`menu-trigger flex items-center justify-between gap-2 cursor-pointer select-none text-left ${fitContent ? 'w-max max-w-full' : 'w-full'} ${className ?? ''} ${
           disabled ? '!opacity-50 !cursor-not-allowed !bg-gray-100/50 dark:!bg-white/[0.05]' : ''
         }`}
       >
         <span className={fitContent ? 'whitespace-nowrap' : 'truncate'}>{selectedOption?.label ?? value}</span>
-        <ChevronDownIcon className={`w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon className="menu-chevron w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
         {showValueTooltips && (
           <ViewportTooltip visible={triggerTooltip.visible} className="max-w-[300px] break-words whitespace-pre-wrap">
             {selectedOption?.label ?? value}
           </ViewportTooltip>
         )}
-      </div>
+      </button>
 
-      {isOpen && (
+      {presence.value && (
         <div
-          className={`absolute z-50 overflow-hidden overflow-y-auto rounded-xl border border-gray-200/60 bg-white/95 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95 dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] dark:ring-white/10 custom-scrollbar ${fitContent ? 'w-max min-w-full max-w-[min(90vw,24rem)]' : 'w-full'} ${
-            placement === 'top' ? 'bottom-full mb-1.5 animate-dropdown-up' : 'top-full mt-1.5 animate-dropdown-down'
+          ref={menuRef}
+          id={menuId}
+          role="listbox"
+          aria-label={ariaLabel}
+          data-closing={presence.closing}
+          data-side={placement}
+          inert={presence.closing}
+          className={`menu-surface menu-motion absolute z-50 overflow-y-auto p-1.5 custom-scrollbar ${fitContent ? 'w-max min-w-full max-w-[min(90vw,24rem)]' : 'w-full'} ${
+            placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
           }`}
           style={{ maxHeight: menuMaxHeight }}
         >
-          {options.map((option) => (
+          {options.map((option, idx) => (
             <div
               key={option.value}
+              id={`${menuId}-${idx}`}
+              role="option"
+              aria-selected={option.value === value}
+              data-selected={option.value === value}
+              data-highlighted={activeIndex === idx}
+              data-variant={option.variant}
               data-option-value={String(option.value)}
               draggable={option.draggable}
               onDragStart={(e) => {
@@ -393,10 +461,14 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
                 e.preventDefault()
                 onChange(option.value)
                 setIsOpen(false)
+                triggerRef.current?.focus({ preventScroll: true })
                 clearOptionTooltipTimer()
                 setHoveredOptionTooltip(null)
               }}
-              onMouseEnter={() => showValueTooltips && setHoveredOptionTooltip(option.value)}
+              onMouseEnter={() => {
+                setActiveIndex(idx)
+                if (showValueTooltips) setHoveredOptionTooltip(option.value)
+              }}
               onMouseLeave={() => {
                 clearOptionTooltipTimer()
                 setHoveredOptionTooltip(null)
@@ -406,7 +478,7 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
                 clearOptionTooltipTimer()
                 setHoveredOptionTooltip(null)
               }}
-              className={`relative flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs transition-colors ${
+              className={`menu-item relative flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs ${
                 draggedValue === option.value
                   ? 'opacity-40 bg-gray-100 dark:bg-white/[0.04]'
                   : option.variant === 'action'
@@ -477,6 +549,9 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                   <PlusIcon className="h-4 w-4" />
                 </span>
+              )}
+              {!option.variant && option.value === value && (
+                <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="m5 12 4 4L19 6" /></svg>
               )}
             </div>
           ))}

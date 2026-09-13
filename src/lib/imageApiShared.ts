@@ -21,6 +21,8 @@ export interface CallApiOptions {
   maskDataUrl?: string
   signal?: AbortSignal
   skipCodexCliSizePrompt?: boolean
+  onRequest?: (url: string, body: unknown) => void
+  onProgress?: (title: string, details: Record<string, unknown>) => void
   onFalRequestEnqueued?: (request: { requestId: string; endpoint: string }) => void
   onCustomTaskEnqueued?: (task: { taskId: string }) => void
   onPartialImage?: (partial: { image: string; partialImageIndex?: number; requestIndex?: number }) => void

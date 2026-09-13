@@ -3,6 +3,8 @@ import type { ChangeEvent as ReactChangeEvent, DragEvent as ReactDragEvent, Mous
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Group, Video } from "lucide-react";
 import { saveAs } from "file-saver";
+import { MOTION_DURATION } from "../../../lib/motion";
+import { useExitPresence } from "../../../hooks/useExitPresence";
 
 import { requestEdit, requestGeneration, requestImageQuestion } from "@canvas/services/api/image";
 import { requestAudioGeneration, storeGeneratedAudio } from "@canvas/services/api/audio";
@@ -218,10 +220,13 @@ function InfiniteCanvasPage() {
     const [connectingParams, setConnectingParams] = useState<ConnectionHandle | null>(null);
     const [connectionTargetNodeId, setConnectionTargetNodeId] = useState<string | null>(null);
     const [pendingConnectionCreate, setPendingConnectionCreate] = useState<PendingConnectionCreate | null>(null);
+    const connectionMenuPresence = useExitPresence(pendingConnectionCreate);
     const [mouseWorld, setMouseWorld] = useState<Position>({ x: 0, y: 0 });
     const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+    const contextMenuPresence = useExitPresence(contextMenu);
     const [nodeCreatePosition, setNodeCreatePosition] = useState<Position | null>(null);
+    const createMenuPresence = useExitPresence(nodeCreatePosition);
     const [runningNodeId, setRunningNodeId] = useState<string | null>(() => Array.from(getCanvasGenerationRequests(projectId).values()).find((request) => !request.controller.signal.aborted)?.runningNodeId || null);
     const [isMiniMapOpen, setIsMiniMapOpen] = useState(false);
     const [backgroundMode, setBackgroundMode] = useState<CanvasBackgroundMode>("lines");
@@ -935,13 +940,20 @@ function InfiniteCanvasPage() {
             setContextMenu(null);
 
             if (focusAnimRef.current) cancelAnimationFrame(focusAnimRef.current);
+            const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+            if (media.matches) {
+                viewportRef.current = target;
+                setViewport(target);
+                focusAnimRef.current = null;
+                return;
+            }
             const start = { ...viewportRef.current };
-            const duration = 450;
+            const duration = MOTION_DURATION.panel;
             const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
             let startTime: number | null = null;
             const step = (now: number) => {
                 if (startTime === null) startTime = now;
-                const progress = Math.min((now - startTime) / duration, 1);
+                const progress = media.matches ? 1 : Math.min((now - startTime) / duration, 1);
                 const t = easeOutCubic(progress);
                 setViewport({ x: start.x + (target.x - start.x) * t, y: start.y + (target.y - start.y) * t, k: start.k + (target.k - start.k) * t });
                 focusAnimRef.current = progress < 1 ? requestAnimationFrame(step) : null;
@@ -2915,12 +2927,13 @@ function InfiniteCanvasPage() {
                             }}
                         />
                     ) : null}
-                    {pendingConnectionCreate ? <ConnectionCreateMenu pending={pendingConnectionCreate} onCreate={(type) => createConnectedNode(type, pendingConnectionCreate)} onClose={cancelPendingConnectionCreate} /> : null}
-                    {nodeCreatePosition ? (
+                    {connectionMenuPresence.value ? <ConnectionCreateMenu pending={connectionMenuPresence.value} closing={connectionMenuPresence.closing} onCreate={(type) => { if (pendingConnectionCreate) createConnectedNode(type, pendingConnectionCreate); }} onClose={cancelPendingConnectionCreate} /> : null}
+                    {createMenuPresence.value ? (
                         <NodeCreateMenu
-                            position={nodeCreatePosition}
+                            position={createMenuPresence.value}
+                            closing={createMenuPresence.closing}
                             onCreate={(type) => {
-                                createNode(type, nodeCreatePosition);
+                                if (nodeCreatePosition) createNode(type, nodeCreatePosition);
                                 setNodeCreatePosition(null);
                             }}
                             onClose={() => setNodeCreatePosition(null)}
@@ -2983,16 +2996,18 @@ function InfiniteCanvasPage() {
 
                 <CanvasZoomControls scale={viewport.k} onScaleChange={setZoomScale} onReset={resetViewport} isMiniMapOpen={isMiniMapOpen} onToggleMiniMap={() => setIsMiniMapOpen((value) => !value)} />
 
-                {contextMenu ? (
+                {contextMenuPresence.value ? (
                     <CanvasNodeContextMenu
-                        menu={contextMenu}
+                        closing={contextMenuPresence.closing}
+                        menu={contextMenuPresence.value}
                         onClose={() => setContextMenu(null)}
                         onDuplicate={() => {
-                            if (contextMenu.type !== "node") return;
+                            if (contextMenu?.type !== "node") return;
                             duplicateNode(contextMenu.nodeId);
                             setContextMenu(null);
                         }}
                         onDelete={() => {
+                            if (!contextMenu) return;
                             if (contextMenu.type === "node") {
                                 deleteNodes(new Set([contextMenu.nodeId]));
                             } else {

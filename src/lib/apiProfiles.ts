@@ -19,6 +19,7 @@ import { normalizeReasoningEffort, normalizeStreamPartialImages, parseDefaultApi
 import { readRuntimeEnv } from './runtimeEnv'
 import { isImportableConfigUrl } from './customProviderConfigUrl'
 import { GPT_IMAGE_MODEL } from './imageModels'
+import { normalizeCharacterImageOptimizer } from './characterImageSettings'
 
 const OPENAI_DEFAULT_BASE_URL = 'https://api.openai.com/v1'
 const RAW_DEFAULT_API_URL = readRuntimeEnv(import.meta.env.VITE_DEFAULT_API_URL)
@@ -464,7 +465,9 @@ export function normalizeApiProfile(input: unknown, fallback?: Partial<ApiProfil
   const record = input && typeof input === 'object' ? input as Record<string, unknown> : {}
   const rawProvider = typeof record.provider === 'string' ? record.provider : ''
   const provider: ApiProvider = rawProvider === 'fal' || rawProvider === 'gemini' || customProviderIds.has(rawProvider) ? rawProvider : 'openai'
-  const apiMode: ApiMode = provider === 'openai' && record.apiMode === 'responses' ? 'responses' : 'images'
+  const apiMode: ApiMode = provider === 'gemini' && record.apiMode === 'generateContent'
+    ? 'generateContent'
+    : provider === 'openai' && record.apiMode === 'responses' ? 'responses' : 'images'
   const defaults = provider === 'fal'
     ? createDefaultFalProfile(fallback)
     : createDefaultOpenAIProfile({ ...fallback, apiMode })
@@ -501,8 +504,8 @@ function validateImportedProfileRecord(input: unknown) {
     throw new Error('JSON 包含 Markdown 链接，请粘贴纯文本')
   }
 
-  if (typeof input.apiMode === 'string' && input.apiMode !== 'images' && input.apiMode !== 'responses') {
-    throw new Error('apiMode 格式无效，应为 images 或 responses')
+  if (typeof input.apiMode === 'string' && !['images', 'responses', 'generateContent'].includes(input.apiMode)) {
+    throw new Error('apiMode 格式无效，应为 images、responses 或 generateContent')
   }
 }
 
@@ -567,6 +570,12 @@ export function normalizeSettings(input: Partial<AppSettings> | unknown): AppSet
     agentApiConfigMode,
     agentTextProfileId,
     agentImageProfileId,
+    characterImageProfileId: typeof record.characterImageProfileId === 'string' && profiles.some((p) => p.id === record.characterImageProfileId) ? record.characterImageProfileId : null,
+    characterTextProfileId: typeof record.characterTextProfileId === 'string' && profiles.some((p) => p.id === record.characterTextProfileId && (isAgentTextApiProfile(p) || p.apiMode === 'generateContent')) ? record.characterTextProfileId : null,
+    characterImageSize: ['auto', '1024x1024', '1024x1536', '1536x1024'].includes(String(record.characterImageSize)) ? String(record.characterImageSize) : '1024x1536',
+    characterImageQuality: record.characterImageQuality === 'low' || record.characterImageQuality === 'high' || record.characterImageQuality === 'auto' ? record.characterImageQuality : 'medium',
+    characterImageBackground: record.characterImageBackground !== false,
+    characterImageOptimizer: normalizeCharacterImageOptimizer(record.characterImageOptimizer),
     profiles,
     activeProfileId,
   }
@@ -658,6 +667,23 @@ export function importCustomProviderSettingsFromJson(
 export function importCustomProviderDefinitionFromJson(jsonText: string, existingProviders: CustomProviderDefinition[] = []): CustomProviderDefinition {
   const result = importCustomProviderSettingsFromJson(jsonText, existingProviders)
   return result.customProviders[0]
+}
+
+// 画廊和人物共用：切换配置时同步旧版顶层字段，避免实际请求被上一配置覆盖。
+export function createSettingsForApiProfile(settings: AppSettings, profile: ApiProfile): AppSettings {
+  const normalized = normalizeSettings(settings)
+  return normalizeSettings({
+    ...normalized,
+    baseUrl: profile.baseUrl,
+    apiKey: profile.apiKey,
+    model: profile.model,
+    timeout: profile.timeout,
+    apiMode: profile.apiMode,
+    codexCli: profile.codexCli,
+    apiProxy: profile.apiProxy,
+    profiles: normalized.profiles.map((item) => item.id === profile.id ? profile : item),
+    activeProfileId: profile.id,
+  })
 }
 
 export function getActiveApiProfile(settings: Partial<AppSettings> | unknown): ApiProfile {

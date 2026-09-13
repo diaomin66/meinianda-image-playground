@@ -1,6 +1,6 @@
 import { strFromU8, strToU8, type AsyncUnzipOptions, unzip, zip } from 'fflate'
 
-import type { AgentConversation, AppSettings, ExportData, FavoriteCollection, StoredImage, StoredImageThumbnail, TaskRecord } from '../types'
+import type { AgentConversation, AppSettings, CharacterData, ExportData, FavoriteCollection, StoredImage, StoredImageThumbnail, TaskRecord } from '../types'
 import { bytesToDataUrl, dataUrlToBytes } from './dataUrl'
 import { getNumberedFileNameBase, sanitizeFileNamePart } from './exportFileName'
 import { getDataUrlDecodedByteSize } from './imageApiShared'
@@ -28,6 +28,7 @@ export interface BuildExportZipParams {
   favoriteCollections: FavoriteCollection[]
   defaultFavoriteCollectionId: string | null
   agentConversations: AgentConversation[]
+  characterData?: CharacterData
   imageTasks?: TaskRecord[]
   includeManifestData?: boolean
   backupPart?: ExportData['backupPart']
@@ -105,6 +106,7 @@ export async function buildExportZip(params: BuildExportZipParams) {
     if (params.includeManifestData !== false) {
       manifest.favoriteCollections = params.favoriteCollections
       manifest.defaultFavoriteCollectionId = params.defaultFavoriteCollectionId
+      if (params.characterData) manifest.characterData = params.characterData
     }
     manifest.imageFiles = imageFiles
     manifest.thumbnailFiles = thumbnailFiles
@@ -249,6 +251,7 @@ function getBaseManifestEstimatedBytes(params: Omit<BuildExportZipParams, 'image
       favoriteCollections: params.favoriteCollections,
       defaultFavoriteCollectionId: params.defaultFavoriteCollectionId,
       agentConversations: [],
+      characterData: params.characterData,
     } : {}),
   }
   return ZIP_BASE_OVERHEAD_BYTES + strToU8(JSON.stringify(manifest)).byteLength

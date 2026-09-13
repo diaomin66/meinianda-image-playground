@@ -161,7 +161,9 @@ export function normalizePersistedState(
   )
     ? persistedState.activeAgentConversationId
     : agentConversations[0]?.id ?? null
-  const appMode = persistedState.appMode === 'canvas'
+  const appMode = persistedState.appMode === 'characters'
+    ? 'characters'
+    : persistedState.appMode === 'canvas'
     ? 'canvas'
     : persistedState.appMode === 'agent'
       ? 'agent'

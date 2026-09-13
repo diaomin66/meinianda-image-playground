@@ -1,7 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildApiUrl } from './devProxy'
 
+afterEach(() => { vi.unstubAllGlobals() })
+
 describe('buildApiUrl', () => {
+  it('本地固定服务商走同源转发，保留 v1beta 和 v1，不修改其他供应商', () => {
+    vi.stubGlobal('__LOCAL_API_RELAY__', true)
+    expect(buildApiUrl('https://meinianda.top/v1beta', 'models/gemini-image:streamGenerateContent?alt=sse&key=test')).toBe('/__local-api/v1beta/models/gemini-image:streamGenerateContent?alt=sse&key=test')
+    expect(buildApiUrl('https://meinianda.top/v1', 'responses')).toBe('/__local-api/v1/responses')
+    expect(buildApiUrl('https://api.example.com/v1beta', 'models/gemini-image:generateContent')).toBe('https://api.example.com/v1beta/models/gemini-image:generateContent')
+    expect(buildApiUrl('https://meinianda.top.evil.example/v1', 'responses')).toBe('https://meinianda.top.evil.example/v1/responses')
+    expect(buildApiUrl('https://meinianda.top/v1', 'responses', null, true)).toBe('/api-proxy/responses')
+  })
   it('uses the same-origin proxy prefix when API proxy is enabled', () => {
     expect(buildApiUrl('http://api.example.com/v1', 'images/edits', null, true)).toBe(
       '/api-proxy/images/edits',

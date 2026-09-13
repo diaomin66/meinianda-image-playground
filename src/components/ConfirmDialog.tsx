@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
+import { useExitPresence } from '../hooks/useExitPresence'
 import { usePreventBackgroundScroll } from '../hooks/usePreventBackgroundScroll'
 import { Checkbox } from './Checkbox'
 import { CopyIcon } from './icons'
@@ -45,7 +46,8 @@ function getActionButtonClass(tone: 'primary' | 'secondary' | 'danger' | 'warnin
 }
 
 export default function ConfirmDialog() {
-  const confirmDialog = useStore((s) => s.confirmDialog)
+  const activeDialog = useStore((s) => s.confirmDialog)
+  const { value: confirmDialog, closing } = useExitPresence(activeDialog)
   const setConfirmDialog = useStore((s) => s.setConfirmDialog)
   const [canConfirm, setCanConfirm] = useState(true)
   const [checkboxChecked, setCheckboxChecked] = useState(false)
@@ -68,16 +70,17 @@ export default function ConfirmDialog() {
   }, [confirmDialog])
 
   const handleClose = () => {
-    if (!canConfirm || isSubmitting) return
+    if (!canConfirm || isSubmitting || closing) return
     setConfirmDialog(null)
   }
 
   const handleCancel = () => {
+    if (!canConfirm || isSubmitting || closing) return
     confirmDialog?.cancelAction?.(checkboxChecked)
     handleClose()
   }
 
-  useCloseOnEscape(Boolean(confirmDialog) && canConfirm, handleClose)
+  useCloseOnEscape(Boolean(activeDialog) && canConfirm, handleClose)
   usePreventBackgroundScroll(Boolean(confirmDialog))
 
   if (!confirmDialog) return null
@@ -91,6 +94,8 @@ export default function ConfirmDialog() {
   return (
     <div
       data-no-drag-select
+      data-closing={closing}
+      inert={closing}
       className="fixed inset-0 z-[110] flex items-center justify-center p-4"
       onClick={handleClose}
     >
@@ -131,7 +136,7 @@ export default function ConfirmDialog() {
               <button
                 key={button.label}
                 onClick={() => {
-                  if (!canConfirm) return
+                  if (!canConfirm || closing) return
                   button.action(checkboxChecked)
                   setConfirmDialog(null)
                 }}
@@ -155,7 +160,7 @@ export default function ConfirmDialog() {
             )}
             <button
               onClick={() => {
-                if (!canConfirm || isSubmitting) return
+                if (!canConfirm || isSubmitting || closing) return
                 if (!confirmDialog.awaitAction) {
                   confirmDialog.action?.(checkboxChecked)
                   setConfirmDialog(null)

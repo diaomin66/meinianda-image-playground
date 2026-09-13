@@ -11,9 +11,11 @@ import ImageContextMenu from './components/ImageContextMenu'
 import SupportPromptModal from './components/SupportPromptModal'
 import { FavoriteCollectionPickerModal, FavoriteCollectionsView, ManageCollectionsModal } from './components/FavoriteCollections'
 import { useGlobalClickSuppression } from './lib/clickSuppression'
+import { useExitPresence } from './hooks/useExitPresence'
 import { useThemeStore as useCanvasThemeStore } from './infiniteCanvas/stores/use-theme-store'
 
 const AgentWorkspace = lazy(() => import('./components/AgentWorkspace'))
+const CharacterWorkspace = lazy(() => import('./components/CharacterWorkspace'))
 const InfiniteCanvasWorkspace = lazy(() => import('./components/InfiniteCanvasWorkspace'))
 const DetailModal = lazy(() => import('./components/DetailModal'))
 const SettingsModal = lazy(() => import('./components/SettingsModal'))
@@ -22,7 +24,9 @@ const MaskEditorModal = lazy(() => import('./components/MaskEditorModal'))
 export default function App() {
   const appMode = useStore((s) => s.appMode)
   const showSettings = useStore((s) => s.showSettings)
+  const settingsPresence = useExitPresence(showSettings ? true : null)
   const detailTaskId = useStore((s) => s.detailTaskId)
+  const detailPresence = useExitPresence(detailTaskId)
   const maskEditorImageId = useStore((s) => s.maskEditorImageId)
   const filterFavorite = useStore((s) => s.filterFavorite)
   const activeFavoriteCollectionId = useStore((s) => s.activeFavoriteCollectionId)
@@ -78,11 +82,13 @@ export default function App() {
   }, [])
 
   return (
-    <div className={appMode === 'canvas' ? 'canvas-app-shell flex h-dvh min-h-0 flex-col overflow-hidden' : 'min-h-dvh'}>
+    <div className={appMode === 'canvas' ? 'canvas-app-shell flex h-dvh min-h-0 flex-col overflow-hidden' : appMode === 'characters' ? 'flex h-dvh min-h-0 flex-col overflow-hidden' : 'min-h-dvh'}>
       <Header />
-      <div className={appMode === 'canvas' ? 'app-mode-stage app-mode-stage-canvas' : 'app-mode-stage'}>
+      <div key={appMode} className={appMode === 'canvas' || appMode === 'characters' ? 'app-mode-stage app-mode-stage-canvas' : 'app-mode-stage'}>
         <Suspense fallback={<div className="p-6" role="status">正在加载工作区…</div>}>
-        {appMode === 'canvas' ? (
+        {appMode === 'characters' ? (
+          <CharacterWorkspace />
+        ) : appMode === 'canvas' ? (
           <InfiniteCanvasWorkspace />
         ) : appMode === 'agent' ? (
           <AgentWorkspace />
@@ -98,8 +104,8 @@ export default function App() {
       </div>
       {appMode !== 'canvas' && (
         <>
-          <InputBar />
-          <Suspense fallback={null}>{detailTaskId && <DetailModal />}</Suspense>
+          {appMode !== 'characters' && <InputBar />}
+          <Suspense fallback={null}>{detailPresence.value && <DetailModal detailTaskId={detailPresence.value} closing={detailPresence.closing} />}</Suspense>
           <Lightbox />
           <SupportPromptModal />
           <FavoriteCollectionPickerModal />
@@ -108,7 +114,7 @@ export default function App() {
           <ImageContextMenu />
         </>
       )}
-      <Suspense fallback={null}>{showSettings && <SettingsModal />}</Suspense>
+      <Suspense fallback={null}>{settingsPresence.value && <SettingsModal closing={settingsPresence.closing} />}</Suspense>
       <ConfirmDialog />
       <Toast />
     </div>
