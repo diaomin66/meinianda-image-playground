@@ -593,8 +593,11 @@ export async function callAgentResponsesApi(opts: {
   imageProfile?: ApiProfile
   params: TaskParams
   input: unknown
+  instructions?: string
+  tools?: Array<Record<string, unknown>>
   maskDataUrl?: string
   signal?: AbortSignal
+  onRequest?: (url: string, body: unknown) => void
   onTextDelta?: (delta: string) => void
   onOutputItems?: (outputItems: ResponsesOutputItem[]) => void
   onImageToolStarted?: (event: { toolCallId: string; outputIndex?: number }) => void | Promise<void>
@@ -615,16 +618,19 @@ export async function callAgentResponsesApi(opts: {
   try {
     const body: Record<string, unknown> = {
       model: profile.model || settings.model,
-      instructions: createAgentInstructions(settings, (imageProfile ?? profile).codexCli ? params.size : undefined),
+      instructions: opts.instructions ?? createAgentInstructions(settings, (imageProfile ?? profile).codexCli ? params.size : undefined),
       input,
-      tools: createAgentTools(params, profile, settings, maskDataUrl),
+      tools: opts.tools ?? createAgentTools(params, profile, settings, maskDataUrl),
     }
+    if (opts.tools) body.parallel_tool_calls = false
     if (profile.reasoningEffort) body.reasoning = { effort: profile.reasoningEffort }
     if (profile.streamImages) {
       body.stream = true
     }
 
-    const response = await fetch(buildApiUrl(profile.baseUrl, 'responses', proxyConfig, useApiProxy), {
+    const url = buildApiUrl(profile.baseUrl, 'responses', proxyConfig, useApiProxy)
+    opts.onRequest?.(url, body)
+    const response = await fetch(url, {
       method: 'POST',
       headers: createHeaders(profile),
       cache: 'no-store',

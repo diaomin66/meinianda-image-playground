@@ -3,6 +3,7 @@ import { Button, Popover, Select, Tooltip } from 'antd'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowDown, ArrowUp, Bot, Check, Copy, History, ImagePlus, Plus, Search, Settings2, Square, Trash2, X } from 'lucide-react'
 
+import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion'
 import { useStore } from '../../../store'
 import MarkdownRenderer from '../../../components/MarkdownRenderer'
 import { copyTextToClipboard } from '../../../lib/clipboard'
@@ -22,6 +23,7 @@ type DirectAgentPanelProps = {
 }
 
 export function DirectAgentPanel({ conversationId, compact = false, onClose }: DirectAgentPanelProps) {
+  const reducedMotion = usePrefersReducedMotion()
   const theme = canvasThemes[useThemeStore((state) => state.theme)]
   const settings = useStore((state) => state.settings)
   const profileState = useMemo(() => getDirectAgentProfile(settings), [settings])
@@ -76,7 +78,8 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
     const container = scrollRef.current
     if (!container || (!isScrolledToBottom && messages[messages.length - 1]?.role !== 'user')) return
     const frame = window.requestAnimationFrame(() => {
-      container.scrollTo({ top: container.scrollHeight, behavior: messages.length > 1 ? 'smooth' : 'auto' })
+      // 流式文字只跟随底部，不在每个增量上重新启动平滑滚动。
+      container.scrollTop = container.scrollHeight
       setIsScrolledToBottom(true)
     })
     return () => window.cancelAnimationFrame(frame)
@@ -185,7 +188,7 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
   const scrollToBottom = () => {
     const container = scrollRef.current
     if (!container) return
-    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    container.scrollTo({ top: container.scrollHeight, behavior: reducedMotion ? 'instant' : 'smooth' })
   }
 
   if (!activeConversation) {
@@ -362,7 +365,7 @@ export function DirectAgentPanel({ conversationId, compact = false, onClose }: D
         <button
           type="button"
           onClick={scrollToBottom}
-          className={`absolute bottom-3 left-1/2 z-20 grid size-9 -translate-x-1/2 place-items-center rounded-full border shadow-lg backdrop-blur transition-all duration-200 ${
+          className={`absolute bottom-3 left-1/2 z-20 grid size-9 -translate-x-1/2 place-items-center rounded-full border shadow-lg backdrop-blur transition-[transform,opacity] duration-200 ${
             isScrolledToBottom || !messages.length ? 'pointer-events-none translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
           }`}
           style={{ background: theme.toolbar.panel, borderColor: theme.node.stroke, color: theme.node.muted }}
@@ -472,10 +475,9 @@ function Message({
   if (item.role === 'tool') {
     return (
       <motion.div
-        layout
         className="rounded-xl border border-blue-500/20 bg-blue-500/[0.06] px-3 py-2 text-xs leading-5"
         style={{ color: theme.node.muted }}
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
       >
@@ -486,7 +488,7 @@ function Message({
   }
   if (item.role === 'system') {
     return (
-      <motion.div layout className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.div className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         <span className="inline-flex rounded-full border px-2.5 py-1 text-[11px]" style={{ borderColor: theme.node.stroke, color: theme.node.muted }}>{item.text}</span>
       </motion.div>
     )
@@ -494,9 +496,8 @@ function Message({
   if (item.role === 'error') {
     return (
       <motion.div
-        layout
         className="rounded-xl border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-xs leading-5 text-red-600 dark:text-red-400"
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
       >
@@ -509,12 +510,10 @@ function Message({
   const assistantThinking = item.role === 'assistant' && sending && Boolean(item.streamId) && !item.text
   return (
     <motion.div
-      layout
       className={`group flex w-full ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}
-      initial={{ opacity: 0, y: 12, scale: 0.985 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 6, scale: 0.985 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
     >
       <article
         className={`relative min-w-0 rounded-2xl border px-3 py-2.5 text-sm leading-6 ${
@@ -543,9 +542,9 @@ function Message({
           <div className="flex items-center gap-2 py-1 text-xs" style={{ color: theme.node.muted }}>
             <span>正在生成回复</span>
             <span className="flex gap-1">
-              <span className="size-1.5 animate-pulse rounded-full bg-current" />
-              <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
-              <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
+              <span className="typing-dot size-1.5 rounded-full bg-current" />
+              <span className="typing-dot size-1.5 rounded-full bg-current [animation-delay:150ms]" />
+              <span className="typing-dot size-1.5 rounded-full bg-current [animation-delay:300ms]" />
             </span>
           </div>
         ) : item.role === 'assistant' ? (

@@ -5,6 +5,7 @@ import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
 import { usePreventBackgroundScroll } from '../hooks/usePreventBackgroundScroll'
 
 interface HelpModalProps {
+  closing: boolean
   appMode: AppMode
   isFavoriteCollectionOverview?: boolean
   onClose: () => void
@@ -20,16 +21,18 @@ function useIsMobile() {
   return isMobile
 }
 
-export default function HelpModal({ appMode, isFavoriteCollectionOverview = false, onClose }: HelpModalProps) {
+export default function HelpModal({ appMode, isFavoriteCollectionOverview = false, onClose, closing }: HelpModalProps) {
   const isMobile = useIsMobile()
   const modalRef = useRef<HTMLDivElement>(null)
   const isAgentMode = appMode === 'agent'
-  useCloseOnEscape(true, onClose)
+  useCloseOnEscape(!closing, onClose)
   usePreventBackgroundScroll(true, modalRef)
 
   return createPortal(
     <div
       data-no-drag-select
+      data-closing={closing}
+      inert={closing}
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       onClick={onClose}
     >

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { MOTION_DURATION } from "../../../../lib/motion";
 
 import { useAgentStore } from "@canvas/stores/use-agent-store";
 import { useCanvasStore } from "@canvas/stores/canvas/use-canvas-store";
@@ -82,10 +83,17 @@ export function useAgentBridge(params: AgentBridgeParams) {
         const target = getAgentFocusViewport(targetNodes, size);
         if (!target) return null;
         if (focusFrameRef.current) cancelAnimationFrame(focusFrameRef.current);
+        const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+        if (media.matches) {
+            viewportRef.current = target;
+            setViewport(target);
+            focusFrameRef.current = null;
+            return target;
+        }
         const start = viewportRef.current;
         const startedAt = performance.now();
         const animate = (now: number) => {
-            const progress = Math.min(1, (now - startedAt) / 260);
+            const progress = media.matches ? 1 : Math.min(1, (now - startedAt) / MOTION_DURATION.panel);
             const eased = 1 - Math.pow(1 - progress, 3);
             const next = {
                 x: start.x + (target.x - start.x) * eased,

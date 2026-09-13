@@ -71,7 +71,11 @@ export function buildApiUrl(
     ? endpointPath
     : ['v1', endpointPath].join('/')
 
-  return normalizedBaseUrl ? `${normalizedBaseUrl}/${apiPath}` : `/${apiPath}`
+  const url = normalizedBaseUrl ? `${normalizedBaseUrl}/${apiPath}` : `/${apiPath}`
+  if (typeof __LOCAL_API_RELAY__ !== 'undefined' && __LOCAL_API_RELAY__ && /^https:\/\/meinianda\.top\//i.test(url)) {
+    return url.replace(/^https:\/\/meinianda\.top/i, '/__local-api')
+  }
+  return url
 }
 
 export function resolveDevProxyConfig(input: unknown, isDev: boolean): DevProxyConfig | null {

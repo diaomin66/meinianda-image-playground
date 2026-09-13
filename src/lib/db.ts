@@ -1,11 +1,12 @@
-import type { AgentConversation, TaskRecord, StoredImage, StoredImageThumbnail } from '../types'
+import type { AgentConversation, CharacterData, TaskRecord, StoredImage, StoredImageThumbnail } from '../types'
 
 const DB_NAME = 'gpt-image-playground'
-const DB_VERSION = 3
+const DB_VERSION = 4
 const STORE_TASKS = 'tasks'
 const STORE_IMAGES = 'images'
 const STORE_THUMBNAILS = 'thumbnails'
 const STORE_AGENT_CONVERSATIONS = 'agentConversations'
+const STORE_CHARACTER_DATA = 'characterData'
 const THUMBNAIL_MAX_SIZE = 720
 const THUMBNAIL_QUALITY = 0.9
 const THUMBNAIL_VERSION = 2
@@ -31,6 +32,9 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORE_AGENT_CONVERSATIONS)) {
         db.createObjectStore(STORE_AGENT_CONVERSATIONS, { keyPath: 'id' })
+      }
+      if (!db.objectStoreNames.contains(STORE_CHARACTER_DATA)) {
+        db.createObjectStore(STORE_CHARACTER_DATA, { keyPath: 'id' })
       }
     }
     req.onsuccess = () => {
@@ -71,6 +75,14 @@ function dbTransaction<T>(
         }
       }),
   )
+}
+
+export function getCharacterData(): Promise<CharacterData | undefined> {
+  return dbTransaction(STORE_CHARACTER_DATA, 'readonly', (s) => s.get('main'))
+}
+
+export function putCharacterData(data: CharacterData): Promise<IDBValidKey> {
+  return dbTransaction(STORE_CHARACTER_DATA, 'readwrite', (s) => s.put({ ...data, id: 'main' }))
 }
 
 // ===== Tasks =====

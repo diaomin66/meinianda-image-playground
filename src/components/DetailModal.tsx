@@ -17,9 +17,8 @@ import { CloseIcon, CodeIcon, CopyIcon, DownloadIcon, EditIcon, LinkIcon, TrashI
 
 import ViewportTooltip from './ViewportTooltip'
 
-export default function DetailModal() {
+export default function DetailModal({ detailTaskId, closing }: { detailTaskId: string; closing: boolean }) {
   const tasks = useStore((s) => s.tasks)
-  const detailTaskId = useStore((s) => s.detailTaskId)
   const setDetailTaskId = useStore((s) => s.setDetailTaskId)
   const setLightboxImageId = useStore((s) => s.setLightboxImageId)
   const setConfirmDialog = useStore((s) => s.setConfirmDialog)
@@ -98,7 +97,7 @@ export default function DetailModal() {
     if (count > 0 && imageIndex >= count) setImageIndex(count - 1)
   }, [imageIndex, streamPreviewItems.length, task, task?.status])
 
-  useCloseOnEscape(Boolean(task), () => setDetailTaskId(null))
+  useCloseOnEscape(Boolean(task) && !closing, () => setDetailTaskId(null))
   usePreventBackgroundScroll(Boolean(task), [modalRef, rawUrlsModalRef, rawResponseModalRef])
 
   // Reset index when task changes
@@ -439,6 +438,8 @@ export default function DetailModal() {
   return (
     <div
       data-no-drag-select
+      data-closing={closing}
+      inert={closing}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={() => setDetailTaskId(null)}
     >

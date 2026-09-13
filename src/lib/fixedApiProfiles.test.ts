@@ -4,6 +4,8 @@ import {
   FIXED_API_BASE_URL,
   FIXED_GEMINI_API_BASE_URL,
   FIXED_GEMINI_PROFILE_ID,
+  FIXED_GEMINI_TEXT_PROFILE_ID,
+  DEFAULT_GEMINI_TEXT_MODEL,
   FIXED_IMAGE_PROFILE_ID,
   FIXED_RESPONSES_PROFILE_ID,
   lockApiSettings,
@@ -11,6 +13,17 @@ import {
 import { GEMINI_FLASH_IMAGE_MODEL, GEMINI_PRO_IMAGE_MODEL, GPT_IMAGE_MODELS } from './imageModels'
 
 describe('locked API settings', () => {
+  it('保留 Gemini 语言模型、独立密钥、原生模式及人物选择', () => {
+    const initial = lockApiSettings({ apiKey: 'image-key' })
+    const selected = lockApiSettings({
+      ...initial,
+      characterTextProfileId: FIXED_GEMINI_TEXT_PROFILE_ID,
+      profiles: initial.profiles.map((profile) => profile.id === FIXED_GEMINI_TEXT_PROFILE_ID ? { ...profile, model: 'gemini-custom', apiKey: 'native-key' } : profile),
+    })
+    const restored = lockApiSettings(JSON.parse(JSON.stringify(selected)))
+    expect(restored.characterTextProfileId).toBe(FIXED_GEMINI_TEXT_PROFILE_ID)
+    expect(restored.profiles.find((profile) => profile.id === FIXED_GEMINI_TEXT_PROFILE_ID)).toMatchObject({ model: 'gemini-custom', apiKey: 'native-key', apiMode: 'generateContent' })
+  })
   it.each(GPT_IMAGE_MODELS)('保留 Images API 模型 %s，重复保存不回退', (model) => {
     const initial = lockApiSettings({ apiKey: 'image-key' })
     const selected = lockApiSettings({
@@ -36,7 +49,7 @@ describe('locked API settings', () => {
     expect(settings.model).toBe(DEFAULT_IMAGES_MODEL)
   })
 
-  it('keeps only the three fixed profiles while preserving their API keys', () => {
+  it('keeps the four fixed profiles while preserving their API keys', () => {
     const settings = lockApiSettings({
       profiles: [
         {
@@ -92,6 +105,14 @@ describe('locked API settings', () => {
         model: DEFAULT_RESPONSES_MODEL,
         apiMode: 'responses',
       }),
+      expect.objectContaining({
+        id: FIXED_GEMINI_TEXT_PROFILE_ID,
+        provider: 'gemini',
+        baseUrl: FIXED_GEMINI_API_BASE_URL,
+        apiKey: 'image-key',
+        model: DEFAULT_GEMINI_TEXT_MODEL,
+        apiMode: 'generateContent',
+      }),
     ])
     expect(settings.activeProfileId).toBe(FIXED_IMAGE_PROFILE_ID)
     expect(settings.agentApiConfigMode).toBe('hybrid')
@@ -102,7 +123,7 @@ describe('locked API settings', () => {
   it('uses the existing key for both fixed profiles during a one-profile migration', () => {
     const settings = lockApiSettings({ apiKey: 'shared-key' })
 
-    expect(settings.profiles.map((profile) => profile.apiKey)).toEqual(['shared-key', 'shared-key', 'shared-key'])
+    expect(settings.profiles.map((profile) => profile.apiKey)).toEqual(['shared-key', 'shared-key', 'shared-key', 'shared-key'])
   })
 
   it('preserves a nonempty selected Agent model on the fixed Responses profile', () => {

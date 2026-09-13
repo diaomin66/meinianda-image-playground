@@ -5,9 +5,14 @@ import { downloadImageEntriesAsZip, downloadImageIds, formatExportFileTime, getI
 import { suppressGlobalClicks } from '../lib/clickSuppression'
 import { ensureImageCached } from '../lib/imageCache'
 import { CopyIcon, DownloadIcon, EditIcon } from './icons'
+import { useExitPresence } from '../hooks/useExitPresence'
+import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
 
 export default function ImageContextMenu() {
-  const [menuInfo, setMenuInfo] = useState<{ src: string; imageId?: string; outputImageIds: string[]; canCopyImage: boolean; x: number; y: number } | null>(null)
+  const [activeMenuInfo, setMenuInfo] = useState<{ src: string; imageId?: string; outputImageIds: string[]; canCopyImage: boolean; x: number; y: number } | null>(null)
+  const presence = useExitPresence(activeMenuInfo)
+  const menuInfo = presence.value
+  useCloseOnEscape(!!activeMenuInfo, () => setMenuInfo(null))
   const showToast = useStore((s) => s.showToast)
   const inputImages = useStore((s) => s.inputImages)
   const setDetailTaskId = useStore((s) => s.setDetailTaskId)
@@ -193,10 +198,10 @@ export default function ImageContextMenu() {
   // 保证菜单在视口内
   let left = menuInfo.x
   let top = menuInfo.y
-  const MENU_WIDTH = 120
+  const MENU_WIDTH = 164
   const showDownloadAll = menuInfo.outputImageIds.length > 1
   const menuItemCount = (menuInfo.canCopyImage ? 1 : 0) + 1 + (showDownloadAll ? 1 : 0) + 1
-  const MENU_HEIGHT = menuItemCount * 32 + 32
+  const MENU_HEIGHT = menuItemCount * 44 + 12
 
   if (left + MENU_WIDTH > window.innerWidth) {
     left -= MENU_WIDTH
@@ -204,18 +209,22 @@ export default function ImageContextMenu() {
   if (top + MENU_HEIGHT > window.innerHeight) {
     top -= MENU_HEIGHT
   }
+  left = Math.max(8, left)
+  top = Math.max(8, top)
 
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 py-1 w-[120px] overflow-hidden animate-fade-in"
+      data-closing={presence.closing}
+      inert={presence.closing}
+      className="menu-surface menu-motion fixed z-[9999] p-1.5 w-[164px] overflow-hidden"
       style={{ left, top }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {menuInfo.canCopyImage && (
         <button
           onClick={handleCopy}
-          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
+          className="menu-item w-full px-3 py-2 text-left text-sm flex items-center gap-3"
         >
           <CopyIcon className="w-4 h-4 flex-shrink-0" />
           复制
@@ -223,7 +232,7 @@ export default function ImageContextMenu() {
       )}
       <button
         onClick={handleDownload}
-        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
+        className="menu-item w-full px-3 py-2 text-left text-sm flex items-center gap-3"
       >
         <DownloadIcon className="w-4 h-4 flex-shrink-0" />
         下载
@@ -231,7 +240,7 @@ export default function ImageContextMenu() {
       {showDownloadAll && (
         <button
           onClick={handleDownloadAll}
-          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
+          className="menu-item w-full px-3 py-2 text-left text-sm flex items-center gap-3"
         >
           <DownloadIcon className="w-4 h-4 flex-shrink-0" />
           下载全部
@@ -239,7 +248,7 @@ export default function ImageContextMenu() {
       )}
       <button
         onClick={handleEdit}
-        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
+        className="menu-item w-full px-3 py-2 text-left text-sm flex items-center gap-3"
       >
         <EditIcon className="w-4 h-4 flex-shrink-0" />
         编辑

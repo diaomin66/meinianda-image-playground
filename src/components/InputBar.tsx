@@ -29,6 +29,8 @@ import { collectAgentRoundOutputImageSlots } from '../lib/agentImageReferences'
 import { ALL_FAVORITES_COLLECTION_ID, getTaskFavoriteCollectionIds } from '../lib/favoriteState'
 import { getContentEditableCursor, getContentEditablePlainText, getContentEditableSelection, getMentionTagHtml, setContentEditableCursor, setContentEditableSelection, syncMentionTagSelection } from '../lib/contentEditableMentions'
 import { useHintTooltip } from '../hooks/useHintTooltip'
+import { useExitPresence } from '../hooks/useExitPresence'
+import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
 import { downloadImageEntriesAsZip, downloadImageIds, formatExportFileTime, getTaskOutputImageZipEntries } from '../lib/downloadImages'
 import SizePickerModal from './SizePickerModal'
 import { CloseIcon, CollapseIcon, ExpandIcon } from './icons'
@@ -344,6 +346,8 @@ export default function InputBar() {
   const [mobileCollapsed, setMobileCollapsed] = useState(false)
   const [showSizePicker, setShowSizePicker] = useState(false)
   const [showMobileUploadMenu, setShowMobileUploadMenu] = useState(false)
+  const uploadMenuPresence = useExitPresence(showMobileUploadMenu ? true : null)
+  useCloseOnEscape(showMobileUploadMenu, () => setShowMobileUploadMenu(false))
   const [maskPreviewUrl, setMaskPreviewUrl] = useState('')
   const [imageDragIndex, setImageDragIndex] = useState<number | null>(null)
   const [imageDragOverIndex, setImageDragOverIndex] = useState<number | null>(null)
@@ -1671,7 +1675,7 @@ export default function InputBar() {
           {/* 输入框 */}
           <div className={`relative grid${promptExpanded ? ' min-h-0 flex-1' : ''}`}>
             {showAtImageMenu && (
-              <div style={{ left: `${menuLeft}px` }} className="absolute bottom-full z-50 mb-2 w-64 overflow-hidden rounded-2xl border border-gray-200/70 bg-white/95 p-1.5 shadow-xl ring-1 ring-black/5 backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95 dark:ring-white/10">
+              <div style={{ left: `${menuLeft}px` }} data-side="top" className="menu-surface menu-motion absolute bottom-full z-50 mb-2 w-64 overflow-hidden p-1.5">
                 <div className="px-2 pb-1 pt-0.5 text-[11px] text-gray-400 dark:text-gray-500">选择图片引用</div>
                 <div className="max-h-56 overflow-y-auto custom-scrollbar">
                   {atImageOptions.map((option, optionIndex) => (
@@ -1895,15 +1899,16 @@ export default function InputBar() {
                   </button>
 
                   {/* Mobile Upload Menu */}
-                  {showMobileUploadMenu && (
+                  {uploadMenuPresence.value && (
                     <>
                       <div
                         className="fixed inset-0 z-40"
+                        inert={uploadMenuPresence.closing}
                         onClick={() => setShowMobileUploadMenu(false)}
                       />
-                      <div className="absolute bottom-full left-0 mb-2 w-32 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <div data-side="top" data-closing={uploadMenuPresence.closing} inert={uploadMenuPresence.closing} className="menu-surface menu-motion absolute bottom-full left-0 mb-2 w-40 p-1.5 overflow-hidden z-50">
                         <button
-                          className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
+                          className="menu-item w-full px-3 py-3 text-left text-sm flex items-center gap-3"
                           onClick={() => {
                             setShowMobileUploadMenu(false)
                             cameraInputRef.current?.click()
@@ -1916,7 +1921,7 @@ export default function InputBar() {
                           拍照
                         </button>
                         <button
-                          className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
+                          className="menu-item w-full px-3 py-3 text-left text-sm flex items-center gap-3"
                           onClick={() => {
                             setShowMobileUploadMenu(false)
                             fileInputRef.current?.click()

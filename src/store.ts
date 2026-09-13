@@ -20,7 +20,7 @@ import type {
   StoredImageThumbnail,
 } from './types'
 import { DEFAULT_AGENT_MAX_TOOL_ROUNDS, DEFAULT_PARAMS } from './types'
-import { DEFAULT_SETTINGS, getActiveApiProfile, getAgentImageApiProfile, getAgentTextApiProfile, getCustomProviderDefinition, mergeImportedSettings, normalizeSettings, validateApiProfile } from './lib/apiProfiles'
+import { DEFAULT_SETTINGS, createSettingsForApiProfile, getActiveApiProfile, getAgentImageApiProfile, getAgentTextApiProfile, getCustomProviderDefinition, mergeImportedSettings, normalizeSettings, validateApiProfile } from './lib/apiProfiles'
 import { lockApiSettings } from './lib/fixedApiProfiles'
 import { DEFAULT_GPT_IMAGE_SIZE, GEMINI_MAX_REFERENCE_IMAGES } from './lib/imageModels'
 import { dismissAllTooltips } from './lib/tooltipDismiss'
@@ -70,6 +70,9 @@ import { ALL_FAVORITES_COLLECTION_ID, DEFAULT_FAVORITE_COLLECTION_ID, createDefa
 import { createPersistedStateSelector, mergePersistedAgentConversations, migratePersistedState, normalizePersistedState } from './lib/persistedState'
 import { addImageSizeParam, createTaskDonePatch, createTaskErrorPatch, deriveAgentImageActualParams, deriveGalleryActualParams, firstActualParams, hasActualParams, hasActualSizeParam, mapActualParamsByImage, mapRevisedPromptsByImage, markInterruptedOpenAIRunningTasks, mergeLoadedTasks } from './lib/taskState'
 import { stripInjectedCodexCliSizePrompt } from './lib/size'
+import { loadCharacters, saveCharacters, useCharacterStore } from './characterStore'
+import { clearCharacterLogs } from './lib/characterLogs'
+import { getCharacterImageIds, mergeCharacterData } from './lib/characterState'
 
 const FAL_RECOVERY_POLL_MS = 10_000
 const CUSTOM_RECOVERY_POLL_MS = 10_000
@@ -112,7 +115,7 @@ function isErrorToastTitle(title: string): boolean {
   return /(?:失败|错误|异常|报错|无法|不能|超时|中断|断开|请先|请输入|已达上限|不存在|已丢失)$/.test(title)
 }
 
-export type SettingsTab = 'general' | 'agent' | 'api' | 'data'
+export type SettingsTab = 'general' | 'agent' | 'api' | 'data' | 'characters'
 
 const TIMEOUT_STREAMING_HINT = '也可尝试打开「流式传输」，并提高「请求中间步骤图像数」来维持连接。'
 const TIMEOUT_PARTIAL_IMAGES_ZERO_HINT = '官方流式接口不发送心跳，当前「请求中间步骤图像数」为 0，连接可能因无数据传输而断开。建议提高到 2 或 3。'
@@ -413,6 +416,7 @@ interface AppState {
 }
 
 function isImageReferencedByState(state: AppState, imageId: string) {
+  if (getCharacterImageIds(useCharacterStore.getState()).has(imageId)) return true
   if (state.inputImages.some((img) => img.id === imageId)) return true
   if (state.galleryInputDraft?.inputImages.some((img) => img.id === imageId)) return true
   if (Object.values(state.agentInputDrafts).some((draft) => draft.inputImages.some((img) => img.id === imageId))) return true
@@ -479,7 +483,7 @@ export const useStore = create<AppState>()(
       // Mode
       appMode: 'canvas',
       setAppMode: (appMode) => {
-        if (appMode === 'canvas') {
+        if (appMode === 'canvas' || appMode === 'characters') {
           const state = get()
           const agentInputDrafts = state.appMode === 'agent'
             ? saveActiveAgentInputDrafts(state)
@@ -1154,22 +1158,6 @@ export function getTaskApiProfile(settings: AppSettings, task: TaskRecord): ApiP
   return null
 }
 
-function createSettingsForApiProfile(settings: AppSettings, profile: ApiProfile): AppSettings {
-  const normalized = normalizeSettings(settings)
-  return normalizeSettings({
-    ...normalized,
-    baseUrl: profile.baseUrl,
-    apiKey: profile.apiKey,
-    model: profile.model,
-    timeout: profile.timeout,
-    apiMode: profile.apiMode,
-    codexCli: profile.codexCli,
-    apiProxy: profile.apiProxy,
-    profiles: normalized.profiles.map((item) => item.id === profile.id ? profile : item),
-    activeProfileId: profile.id,
-  })
-}
-
 function getAgentProfileValidationError(settings: AppSettings): { profile: ApiProfile | null; message: string } | null {
   const normalized = normalizeSettings(settings)
   const textProfile = getAgentTextApiProfile(normalized)
@@ -1416,6 +1404,7 @@ async function loadStore() {
     ...task,
     params: { ...DEFAULT_PARAMS, ...task.params },
   }))
+  await loadCharacters()
   const storedAgentConversations = normalizeAgentConversations(await getAllAgentConversations())
   let loadedAgentConversations = mergePersistedAgentConversations(storedAgentConversations, legacyAgentConversations)
   const currentAgentConversations = normalizeAgentConversations(useStore.getState().agentConversations)
@@ -4186,9 +4175,17 @@ export interface ClearOptions {
 
 /** 清空数据 */
 export async function clearData(options: ClearOptions = { clearConfig: true, clearTasks: true }) {
+  if (options.clearTasks && hasActiveDataOperations(useStore.getState().tasks, useStore.getState().agentConversations, useCharacterStore.getState().conversations)) {
+    useStore.getState().showToast('请完成或停止当前任务后再清空数据', 'error')
+    return
+  }
   const { setTasks, clearInputImages, clearMaskDraft, setSettings, setParams, showToast } = useStore.getState()
 
   if (options.clearTasks) {
+    await loadCharacters()
+    clearCharacterLogs()
+    useCharacterStore.setState({ characters: [], conversations: [], activeCharacterId: null, activeConversationId: null })
+    await saveCharacters()
     await dbClearTasks()
     await dbClearAgentConversations()
     await clearImages()
@@ -4277,8 +4274,9 @@ export interface ExportOptions {
 /** 导出数据为 ZIP */
 export async function exportData(options: ExportOptions = { exportConfig: true, exportTasks: true }) {
   try {
+    if (options.exportTasks) await loadCharacters()
     const state = useStore.getState()
-    if (options.exportTasks && hasActiveDataOperations(state.tasks, state.agentConversations)) throw new Error('当前有任务正在进行，请完成或停止后再导出。')
+    if (options.exportTasks && hasActiveDataOperations(state.tasks, state.agentConversations, useCharacterStore.getState().conversations)) throw new Error('当前有任务正在进行，请完成或停止后再导出。')
     const tasks = options.exportTasks ? await getAllTasks() : []
     const imageIds = options.exportTasks ? await getAllImageIds() : []
     const { settings, agentConversations, favoriteCollections, defaultFavoriteCollectionId } = state
@@ -4292,6 +4290,7 @@ export async function exportData(options: ExportOptions = { exportConfig: true, 
       favoriteCollections,
       defaultFavoriteCollectionId,
       agentConversations: options.exportTasks ? getPersistableAgentConversations(agentConversations) : [],
+      characterData: options.exportTasks ? { characters: useCharacterStore.getState().characters, conversations: useCharacterStore.getState().conversations } : undefined,
     }
     const imageSizes = []
     for (const id of imageIds) {
@@ -4361,7 +4360,7 @@ export interface ImportOptions {
 export async function importData(input: File | File[], options: ImportOptions = { importConfig: true, importTasks: true }): Promise<boolean> {
   try {
     const state = useStore.getState()
-    if (options.importTasks && hasActiveDataOperations(state.tasks, state.agentConversations)) throw new Error('当前有任务正在进行，请完成或停止后再导入。')
+    if (options.importTasks && hasActiveDataOperations(state.tasks, state.agentConversations, useCharacterStore.getState().conversations)) throw new Error('当前有任务正在进行，请完成或停止后再导入。')
     const files = Array.isArray(input) ? input : [input]
     if (!files.length) throw new Error('没有选择备份文件。')
     if (files.some((file) => file.size >= MAX_EXPORT_ZIP_BYTES)) {
@@ -4468,6 +4467,11 @@ export async function importData(input: File | File[], options: ImportOptions = 
         }
       })
       await replaceStoredAgentConversations(useStore.getState().agentConversations)
+      await loadCharacters()
+      for (const part of selected) {
+        if (part.manifest.characterData) useCharacterStore.setState(mergeCharacterData(useCharacterStore.getState(), part.manifest.characterData))
+      }
+      await saveCharacters()
       skipSupportPromptForImportedData(tasks)
       scheduleThumbnailBackfill(importedImageIds)
     }

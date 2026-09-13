@@ -22,6 +22,12 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
+  --motion-fast: 140ms;
+  --motion-standard: 220ms;
+  --motion-panel: 280ms;
+  --motion-exit: 140ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-out: cubic-bezier(0.4, 0, 1, 1);
   scrollbar-gutter: stable;
 }
 
@@ -266,11 +272,12 @@ html.dark .markdown-renderer :where(th) {
 }
 
 @keyframes toast-enter {
-  0% { transform: translate(-50%, 16px); opacity: 0; }
+  0% { transform: translate(-50%, 8px); opacity: 0; }
   100% { transform: translate(-50%, 0); opacity: 1; }
 }
 .toast-enter {
-  animation: toast-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform: translateX(-50%);
+  animation: toast-enter var(--motion-standard) var(--motion-ease) backwards;
 }
 
 /* ===== 弹窗通用动画 ===== */
@@ -281,25 +288,25 @@ html.dark .markdown-renderer :where(th) {
   to   { opacity: 1; }
 }
 .animate-overlay-in {
-  animation: overlay-in 0.2s ease-out both;
+  animation: overlay-in var(--motion-fast) ease-out backwards;
 }
 
 /* 弹窗面板：从中心弹出 */
 @keyframes modal-in {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  from { opacity: 0; transform: scale(0.98) translateY(8px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 .animate-modal-in {
-  animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: modal-in var(--motion-panel) var(--motion-ease) backwards;
 }
 
 /* 设置面板：从上方滑入 */
 @keyframes slide-down-in {
-  from { opacity: 0; transform: translateY(-20px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-slide-down-in {
-  animation: slide-down-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: slide-down-in var(--motion-standard) var(--motion-ease) backwards;
 }
 
 /* Lightbox：淡入 */
@@ -308,32 +315,32 @@ html.dark .markdown-renderer :where(th) {
   to   { opacity: 1; }
 }
 .animate-fade-in {
-  animation: fade-in 0.2s ease-out both;
+  animation: fade-in var(--motion-standard) ease-out backwards;
 }
 
 /* Lightbox 图片：缩放弹入 */
 @keyframes zoom-in {
-  from { opacity: 0; transform: scale(0.9); }
+  from { opacity: 0; transform: scale(0.98); }
   to   { opacity: 1; transform: scale(1); }
 }
 .animate-zoom-in {
-  animation: zoom-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: zoom-in var(--motion-panel) var(--motion-ease) backwards;
 }
 
 /* 确认对话框：从下方弹入 */
 @keyframes confirm-in {
-  from { opacity: 0; transform: scale(0.92) translateY(16px); }
+  from { opacity: 0; transform: scale(0.98) translateY(6px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 .animate-confirm-in {
-  animation: confirm-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: confirm-in var(--motion-standard) var(--motion-ease) backwards;
 }
 
 /* 移动端折叠区域收起/展开 */
 .collapse-section {
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows 0.25s ease-out, opacity 0.2s ease-out;
+  transition: grid-template-rows var(--motion-standard) var(--motion-ease), opacity var(--motion-fast) ease-out;
   opacity: 1;
 }
 .collapse-section.collapsed {
@@ -341,6 +348,7 @@ html.dark .markdown-renderer :where(th) {
   opacity: 0;
 }
 .collapse-section > .collapse-inner {
+  min-height: 0;
   overflow: visible;
 }
 .collapse-section.collapsed > .collapse-inner {
@@ -349,21 +357,101 @@ html.dark .markdown-renderer :where(th) {
 
 /* 下拉菜单：向下展开 */
 @keyframes dropdown-down {
-  from { opacity: 0; transform: scaleY(0.9) translateY(-4px); }
-  to   { opacity: 1; transform: scaleY(1) translateY(0); }
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 /* 下拉菜单：向上展开 */
 @keyframes dropdown-up {
-  from { opacity: 0; transform: scaleY(0.9) translateY(4px); }
-  to   { opacity: 1; transform: scaleY(1) translateY(0); }
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .animate-dropdown-down {
   transform-origin: top center;
-  animation: dropdown-down 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dropdown-down var(--motion-fast) var(--motion-ease) backwards;
 }
 .animate-dropdown-up {
   transform-origin: bottom center;
-  animation: dropdown-up 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dropdown-up var(--motion-fast) var(--motion-ease) backwards;
+}
+
+/* 菜单共用材质与动效，画布 Portal 也继承同一套主题。 */
+:root {
+  --menu-bg: rgba(255, 255, 255, 0.97);
+  --menu-text: #3f3f46;
+  --menu-hover: rgba(24, 24, 27, 0.045);
+  --menu-selected: rgba(37, 99, 235, 0.09);
+  --menu-accent: #2563eb;
+  --menu-edge: rgba(24, 24, 27, 0.055);
+  --menu-shadow: 0 12px 36px -8px rgba(24, 24, 27, 0.16), 0 3px 10px -4px rgba(24, 24, 27, 0.08);
+}
+.dark {
+  --menu-bg: rgba(28, 28, 32, 0.97);
+  --menu-text: #e4e4e7;
+  --menu-hover: rgba(255, 255, 255, 0.06);
+  --menu-selected: rgba(59, 130, 246, 0.16);
+  --menu-accent: #60a5fa;
+  --menu-edge: rgba(255, 255, 255, 0.075);
+  --menu-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.42), 0 3px 10px -4px rgba(0, 0, 0, 0.2);
+}
+.menu-surface {
+  border: 0;
+  border-radius: 18px;
+  background: var(--menu-bg);
+  color: var(--menu-text);
+  box-shadow: var(--menu-shadow), inset 0 0 0 1px var(--menu-edge);
+  backdrop-filter: blur(16px);
+  overscroll-behavior: contain;
+  scroll-padding: 6px;
+}
+.menu-item {
+  min-height: 36px;
+  border-radius: 12px;
+  outline: none;
+  color: var(--menu-text);
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+.menu-item:is(:hover, :focus-visible, [data-highlighted='true'], [data-highlighted='']) {
+  background: var(--menu-hover);
+}
+.menu-item:is([data-selected='true'], [data-state='checked']) {
+  background: var(--menu-selected) !important;
+  color: var(--menu-accent);
+  font-weight: 500;
+}
+.menu-item[data-variant='action'] { color: var(--menu-accent); }
+.menu-item[data-variant='danger'] { color: #ef4444; }
+.dark .menu-item[data-variant='danger'] { color: #f87171; }
+.menu-item[data-variant='danger']:is(:hover, :focus-visible, [data-highlighted='true']) { background: rgba(239, 68, 68, 0.09); }
+.menu-trigger {
+  transition: background-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+.menu-trigger:is(:focus-visible, [aria-expanded='true']) {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--menu-selected);
+}
+.menu-chevron {
+  transition: transform var(--motion-standard) var(--motion-ease), color var(--motion-fast) ease;
+}
+[aria-expanded='true'] > .menu-chevron { transform: rotate(180deg); color: var(--menu-accent); }
+@keyframes menu-enter {
+  from { opacity: 0; transform: translateY(var(--menu-offset, -5px)) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes menu-exit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(var(--menu-offset, -5px)) scale(0.98); }
+}
+.menu-motion {
+  transform-origin: top center;
+  animation: menu-enter var(--motion-standard) var(--motion-ease) both;
+}
+.menu-motion[data-side='top'] { --menu-offset: 5px; transform-origin: bottom center; }
+.menu-motion:is([data-closing='true'], [data-state='closed']) {
+  pointer-events: none;
+  animation: menu-exit var(--motion-exit) var(--motion-ease-out) both;
+}
+@media (pointer: coarse) {
+  .menu-item { min-height: 44px; }
 }
 
 .safe-area-x {
@@ -398,7 +486,7 @@ html.dark .markdown-renderer :where(th) {
   place-items: center;
   border-radius: 0.625rem;
   color: #6b7280;
-  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, transform var(--motion-fast) var(--motion-ease);
 }
 
 .app-header-action:hover {
@@ -407,7 +495,7 @@ html.dark .markdown-renderer :where(th) {
 }
 
 .app-header-action:active {
-  transform: scale(0.94);
+  transform: scale(0.96);
 }
 
 .app-header-action:focus-visible {
@@ -426,11 +514,11 @@ html.dark .app-header-action:hover {
 
 .app-header-theme-icon {
   display: flex;
-  animation: header-theme-in 180ms ease-out;
+  animation: header-theme-in var(--motion-standard) var(--motion-ease);
 }
 
 @keyframes header-theme-in {
-  from { opacity: 0; transform: rotate(-20deg) scale(0.85); }
+  from { opacity: 0; transform: rotate(-12deg) scale(0.94); }
   to { opacity: 1; transform: rotate(0) scale(1); }
 }
 
@@ -523,7 +611,7 @@ html.dark .app-header-action:hover {
   vertical-align: baseline;
   user-select: all;
   cursor: default;
-  transition: all 0.15s ease;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, border-color var(--motion-fast) ease;
 }
 
 .mention-tag::selection,
@@ -582,4 +670,47 @@ html.dark .mention-tag.selected {
 .ios-rounded-scroll-fix {
   isolation: isolate;
   -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
+
+/* 只让新挂载的内容入场，不在状态更新时反复触发布局动画。 */
+@keyframes content-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-content-in { animation: content-in var(--motion-standard) var(--motion-ease) backwards; }
+.app-mode-stage { animation: fade-in var(--motion-standard) ease-out backwards; }
+
+@keyframes overlay-out { to { opacity: 0; } }
+@keyframes modal-out { to { opacity: 0; transform: translateY(4px) scale(0.99); } }
+@keyframes toast-out { to { opacity: 0; transform: translate(-50%, 6px); } }
+[data-closing="true"] > .animate-overlay-in { animation: overlay-out var(--motion-exit) ease-out forwards; }
+[data-closing="true"] > :is(.animate-modal-in, .animate-confirm-in) { animation: modal-out var(--motion-exit) var(--motion-ease-out) forwards; }
+[data-lightbox-root][data-closing="true"] > .animate-fade-in { animation: overlay-out var(--motion-exit) ease-out forwards; }
+[data-lightbox-root][data-closing="true"] > .animate-zoom-in { animation: modal-out var(--motion-exit) var(--motion-ease-out) forwards; }
+.toast-enter[data-closing="true"] { animation: toast-out var(--motion-exit) ease-out forwards; }
+
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.45; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+.typing-dot { animation: typing-dot 1.2s ease-in-out infinite; }
+
+@layer base {
+  :where(button, a, input, textarea, select, [role="button"]) {
+    transition-property: color, background-color, border-color, opacity, box-shadow;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--motion-ease);
+  }
+}
+
+/* CSS 和第三方控件统一尊重系统偏好；不覆盖画布的定位与缩放变换。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after, dialog::backdrop {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }

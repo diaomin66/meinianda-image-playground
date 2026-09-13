@@ -1,10 +1,10 @@
 // ===== 设置 =====
 
-export type ApiMode = 'images' | 'responses'
+export type ApiMode = 'images' | 'responses' | 'generateContent'
 export type ThemePreference = 'system' | 'light' | 'dark'
 export const REASONING_EFFORT_VALUES = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 export type ReasoningEffort = typeof REASONING_EFFORT_VALUES[number]
-export type AppMode = 'canvas' | 'gallery' | 'agent'
+export type AppMode = 'canvas' | 'gallery' | 'agent' | 'characters'
 export type AgentApiConfigMode = 'off' | 'native' | 'hybrid'
 export const ZIP_DOWNLOAD_ROUTE_VALUES = [
   'task-selection',
@@ -116,6 +116,12 @@ export interface AppSettings {
   agentApiConfigMode: AgentApiConfigMode
   agentTextProfileId?: string | null
   agentImageProfileId?: string | null
+  characterImageProfileId?: string | null
+  characterTextProfileId?: string | null
+  characterImageSize?: string
+  characterImageQuality?: 'auto' | 'low' | 'medium' | 'high'
+  characterImageBackground?: boolean
+  characterImageOptimizer?: CharacterImageOptimizerSettings
   profiles: ApiProfile[]
   activeProfileId: string
 }
@@ -306,6 +312,158 @@ export interface AgentConversation {
   messages: AgentMessage[]
 }
 
+// ===== 人物 =====
+
+export interface Character {
+  id: string
+  name: string
+  avatarImageId?: string
+  personality: string
+  appearance: string
+  opening: string
+  referenceImageIds: string[]
+  autoImages: boolean
+  lifeSchedulerEnabled?: boolean
+  lifeScheduleTime?: string
+  lifeSchedule?: CharacterLifeSchedule
+  lifeScheduleHistory?: CharacterLifeSchedule[]
+  createdAt: number
+  updatedAt: number
+}
+
+export interface CharacterLifeSchedule {
+  date: string
+  outfitStyle: string
+  outfit: string
+  schedule: string
+  generatedAt: number
+}
+
+export interface CharacterMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  imageIds: string[]
+  status: 'done' | 'replying' | 'imaging' | 'error'
+  error?: string
+  imagePrompt?: string
+  imageReferenceIds?: string[]
+  imageRequest?: CharacterImageRequest
+  imageError?: string
+  imageJobs?: CharacterImageJob[]
+  imageNotificationIds?: string[]
+  toolTurns?: CharacterToolTurn[]
+  textProfileId?: string
+  textModel?: string
+  createdAt: number
+}
+
+export interface CharacterConversation {
+  id: string
+  characterId: string
+  title: string
+  messages: CharacterMessage[]
+  createdAt: number
+  updatedAt: number
+}
+
+export interface CharacterImageRequest {
+  profileId: string
+  model: string
+  prompt: string
+  referenceIds: string[]
+  maskImageId: string | null
+  params: TaskParams
+  mode?: 'draw' | 'edit' | 'selfie'
+  referenceRoles?: CharacterReferenceRole[]
+  optimize?: boolean
+}
+
+export type CharacterReferenceRole = 'identity' | 'subject' | 'style' | 'clothing' | 'object' | 'pose' | 'background'
+
+export interface CharacterImageOptimizerSettings {
+  enabled: boolean
+  profileId: string | null
+  model: string
+  style: 'follow' | 'photo' | 'selfie' | 'cinema' | 'anime' | 'toy' | 'custom'
+  customPrompt: string
+  timeout: number
+}
+
+export interface CharacterImageJobItem {
+  prompt: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted'
+  optimizerStatus?: 'disabled' | 'optimized' | 'fallback'
+  optimizerNote?: string
+  imageIds: string[]
+  output?: Record<string, unknown>
+  error?: string
+}
+
+export interface CharacterImageJob {
+  id: string
+  callKey: string
+  request: CharacterImageRequest
+  status: 'queued' | 'optimizing' | 'generating' | 'completed' | 'partial' | 'failed' | 'cancelled' | 'interrupted'
+  items: CharacterImageJobItem[]
+  optimizerStatus?: 'disabled' | 'optimized' | 'fallback'
+  optimizerNote?: string
+  error?: string
+  notification: 'pending' | 'replying' | 'done' | 'failed'
+  createdAt: number
+  finishedAt?: number
+}
+
+export interface CharacterToolResult {
+  callId?: string
+  name: string
+  output: Record<string, unknown>
+  imageIds: string[]
+}
+
+export interface CharacterToolTurn {
+  outputItems?: ResponsesOutputItem[]
+  content?: GeminiContent
+  results: CharacterToolResult[]
+}
+
+export interface GeminiContent {
+  role: 'user' | 'model'
+  parts: GeminiPart[]
+}
+
+export interface GeminiPart {
+  text?: string
+  thought?: boolean
+  thoughtSignature?: string
+  inlineData?: { mimeType: string; data: string }
+  functionCall?: { id?: string; name: string; args?: Record<string, unknown> }
+  functionResponse?: { id?: string; name: string; response: Record<string, unknown> }
+}
+
+export interface CharacterData {
+  characters: Character[]
+  conversations: CharacterConversation[]
+}
+
+export interface CharacterLogContext {
+  conversationId: string
+  messageId?: string
+  jobId?: string
+}
+
+export interface CharacterLogEntry extends CharacterLogContext {
+  id: string
+  createdAt: number
+  stage: 'chat' | 'tool' | 'optimizer' | 'image'
+  status: 'info' | 'running' | 'success' | 'warning' | 'error'
+  title: string
+  details?: string
+  result?: string
+  durationMs?: number
+  firstTokenMs?: number
+}
+
 // ===== IndexedDB 存储的图片 =====
 
 export interface StoredImage {
@@ -463,6 +621,7 @@ export interface ExportData {
   favoriteCollections?: FavoriteCollection[]
   defaultFavoriteCollectionId?: string | null
   agentConversations?: AgentConversation[]
+  characterData?: CharacterData
   /** imageId → 图片信息 */
   imageFiles?: Record<string, {
     path: string

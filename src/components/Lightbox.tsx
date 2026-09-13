@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { createInputImageFromFile, deleteImageIfUnreferenced, useStore } from '../store'
 import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
+import { useExitPresence } from '../hooks/useExitPresence'
 import { useHintTooltip } from '../hooks/useHintTooltip'
 import { usePreventBackgroundScroll } from '../hooks/usePreventBackgroundScroll'
 import { createMaskPreviewDataUrl } from '../lib/canvasImage'
@@ -23,7 +24,8 @@ function clamp(v: number, min: number, max: number) {
 }
 
 export default function Lightbox() {
-  const lightboxImageId = useStore((s) => s.lightboxImageId)
+  const activeImageId = useStore((s) => s.lightboxImageId)
+  const { value: lightboxImageId, closing } = useExitPresence(activeImageId)
   const lightboxImageList = useStore((s) => s.lightboxImageList)
   const setLightboxImageId = useStore((s) => s.setLightboxImageId)
   const maskDraft = useStore((s) => s.maskDraft)
@@ -40,7 +42,7 @@ export default function Lightbox() {
   const [maskPreviewSrc, setMaskPreviewSrc] = useState('')
 
   const close = useCallback(() => setLightboxImageId(null), [setLightboxImageId])
-  useCloseOnEscape(Boolean(lightboxImageId), close)
+  useCloseOnEscape(Boolean(activeImageId), close)
   usePreventBackgroundScroll(Boolean(lightboxImageId))
 
   // 图片加载
@@ -196,20 +198,21 @@ export default function Lightbox() {
 
   // 键盘左右切换
   useEffect(() => {
-    if (!lightboxImageId || !showNav) return
+    if (!lightboxImageId || !showNav || closing) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev() }
       if (e.key === 'ArrowRight') { e.preventDefault(); goNext() }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lightboxImageId, showNav, goPrev, goNext])
+  }, [lightboxImageId, showNav, goPrev, goNext, closing])
 
   if (!lightboxImageId || !src) return null
 
   return (
     <>
       <LightboxInner
+        closing={closing}
         src={src}
         imageId={lightboxImageId}
         maskPreviewSrc={maskPreviewSrc}
@@ -236,6 +239,7 @@ export default function Lightbox() {
 }
 
 interface LightboxInnerProps {
+  closing: boolean
   src: string
   imageId: string
   maskPreviewSrc?: string
@@ -252,7 +256,7 @@ interface LightboxInnerProps {
 }
 
 /** 内部组件：保证挂载时 DOM 已经存在，所有 ref / effect 都可靠 */
-function LightboxInner({ src, imageId, maskPreviewSrc, onClose, showNav, currentIndex, total, onPrev, onNext, showInputActions, editDisabled, onReplace, onEdit }: LightboxInnerProps) {
+function LightboxInner({ src, imageId, maskPreviewSrc, onClose, showNav, currentIndex, total, onPrev, onNext, showInputActions, editDisabled, onReplace, onEdit, closing }: LightboxInnerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const openedAtRef = useRef(Date.now())
   const editHint = useHintTooltip({ enabled: () => editDisabled })
@@ -690,6 +694,8 @@ function LightboxInner({ src, imageId, maskPreviewSrc, onClose, showNav, current
     <div
       ref={containerRef}
       data-lightbox-root
+      data-closing={closing}
+      inert={closing}
       className="fixed inset-0 z-[60] flex items-center justify-center select-none"
       style={{ cursor: isZoomed ? (isDragging ? 'grabbing' : 'grab') : 'pointer' }}
       onClick={onClick}
@@ -702,7 +708,7 @@ function LightboxInner({ src, imageId, maskPreviewSrc, onClose, showNav, current
           style={{
             transform: `translate(${tx}px, ${ty}px) scale(${s})`,
             transition: isDragging ? 'none' : 'transform 0.2s ease-out',
-            willChange: 'transform',
+            willChange: isDragging ? 'transform' : undefined,
           }}
         >
           <img

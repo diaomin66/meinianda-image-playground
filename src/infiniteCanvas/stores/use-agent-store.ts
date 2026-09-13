@@ -4,6 +4,7 @@ import type { CanvasAgentOp, CanvasAgentSnapshot } from '@canvas/lib/canvas/canv
 import { randomId } from '@canvas/lib/utils'
 import { readDirectAgentConversations, saveDirectAgentConversations } from '@canvas/services/agent-chat-storage'
 import type { ReasoningEffort } from '../../types'
+import { MOTION_DURATION } from '../../lib/motion'
 
 export type AgentChatRole = 'user' | 'assistant' | 'system' | 'tool' | 'error'
 export type AgentAttachment = { id: string; name: string; type: string; size: number; width: number; height: number; url: string; dataUrl: string }
@@ -57,7 +58,8 @@ type AgentStore = {
   deleteDirectConversation: (id: string) => void
 }
 
-export const CANVAS_AGENT_PANEL_MOTION_MS = 500
+export const CANVAS_AGENT_PANEL_MOTION_MS = MOTION_DURATION.panel
+let closeTimer: ReturnType<typeof setTimeout> | undefined
 
 function createDirectAgentConversation(): DirectAgentConversation {
   const now = Date.now()
@@ -102,6 +104,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   setAgentState: (patch) => set(patch),
   setPanelProjectId: (panelProjectId) => set({ panelProjectId }),
   openPanel: (conversationId) => {
+    clearTimeout(closeTimer)
     const state = get()
     const targetId = conversationId && state.directConversations.some((conversation) => conversation.id === conversationId)
       ? conversationId
@@ -124,8 +127,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   },
   closePanel: () => {
     if (!get().panelMounted || get().panelClosing) return
+    clearTimeout(closeTimer)
     set({ panelOpen: false, panelClosing: true })
-    setTimeout(() => {
+    closeTimer = setTimeout(() => {
       if (get().panelClosing) set({ panelClosing: false })
     }, CANVAS_AGENT_PANEL_MOTION_MS)
   },

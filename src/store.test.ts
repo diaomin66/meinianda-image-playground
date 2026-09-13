@@ -8,6 +8,7 @@ import { getSelectedImageMentionLabel } from './lib/promptImageMentions'
 import { hasActiveDataOperations } from './lib/dataOperations'
 import { deleteAgentRoundFromConversation, getActiveAgentRounds, getAgentConversationTaskIds, getAgentRoundTaskIds, remapAgentRoundMentionsForPathChange } from './lib/agentConversationState'
 import { cleanStaleAgentInputDrafts } from './lib/inputDraftState'
+import { useCharacterStore } from './characterStore'
 vi.mock('./lib/db', () => {
   const tasks = new Map<string, TaskRecord>()
   const images = new Map<string, StoredImage>()
@@ -16,6 +17,8 @@ vi.mock('./lib/db', () => {
   let imageSeq = 0
 
   return {
+    getCharacterData: vi.fn(async () => undefined),
+    putCharacterData: vi.fn(async () => 'main'),
     CURRENT_THUMBNAIL_VERSION: 2,
     getAllTasks: vi.fn(async () => [...tasks.values()]),
     putTask: async (task: TaskRecord) => {
@@ -2099,6 +2102,25 @@ describe('agent round deletion', () => {
 })
 
 describe('data import', () => {
+  it('导入人物档案和聊天后，启动图片回收保留人物专用图片', async () => {
+    useStore.setState({ tasks: [], agentConversations: [], showToast: vi.fn() })
+    const data = {
+      characters: [{ id: 'lin', name: '林夏', personality: '摄影师', appearance: '', opening: '', referenceImageIds: ['character-face'], autoImages: true, createdAt: 1, updatedAt: 1 }],
+      conversations: [{ id: 'char-chat', characterId: 'lin', title: '你好', messages: [{ id: 'msg', role: 'assistant' as const, content: '你好', imageIds: ['character-output'], status: 'done' as const, createdAt: 1 }], createdAt: 1, updatedAt: 1 }],
+    }
+    const result = await importData(importFile({
+      version: 3, exportedAt: new Date(0).toISOString(), tasks: [], characterData: data,
+      imageFiles: { 'character-face': { path: 'images/face.png' }, 'character-output': { path: 'images/output.png' } },
+    }, { 'images/face.png': new Uint8Array([1, 2]), 'images/output.png': new Uint8Array([3, 4]) }), { importTasks: true, importConfig: false })
+    expect(result).toBe(true)
+    await initStore()
+    const { getImage } = await import('./lib/db')
+    expect(await getImage('character-face')).toBeDefined()
+    expect(await getImage('character-output')).toBeDefined()
+    expect(useCharacterStore.getState().characters[0].name).toBe('林夏')
+    expect(useCharacterStore.getState().conversations[0].messages[0].imageIds).toEqual(['character-output'])
+    useCharacterStore.setState({ characters: [], conversations: [] })
+  })
   beforeEach(async () => {
     useStore.setState({
       tasks: [],
@@ -2371,8 +2393,8 @@ describe('data import', () => {
 
     const profiles = useStore.getState().settings.profiles
     expect(imported).toBe(true)
-    expect(profiles.map((profile) => profile.id)).toEqual([FIXED_IMAGE_PROFILE_ID, FIXED_GEMINI_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID])
-    expect(profiles.filter((profile) => profile.id !== FIXED_GEMINI_PROFILE_ID).every((profile) => profile.baseUrl === FIXED_API_BASE_URL)).toBe(true)
+    expect(profiles.map((profile) => profile.id)).toEqual([FIXED_IMAGE_PROFILE_ID, FIXED_GEMINI_PROFILE_ID, FIXED_RESPONSES_PROFILE_ID, 'fixed-gemini-text'])
+    expect(profiles.filter((profile) => ![FIXED_GEMINI_PROFILE_ID, 'fixed-gemini-text'].includes(profile.id)).every((profile) => profile.baseUrl === FIXED_API_BASE_URL)).toBe(true)
   })
 
   it('rejects an incomplete multipart backup before importing data', async () => {

@@ -13,19 +13,23 @@ export type PendingConnectionCreate = {
 
 export function ConnectionCreateMenu({
     pending,
+    closing,
     onCreate,
     onClose,
 }: {
     pending: PendingConnectionCreate;
+    closing: boolean;
     onCreate: (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio) => void;
     onClose: () => void;
 }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     return (
         <div
-            className="absolute z-[120] w-[300px] rounded-[18px] border p-3 shadow-2xl backdrop-blur"
+            className="menu-surface menu-motion absolute z-[120] w-[300px] max-w-[calc(100vw-24px)] p-3"
+            data-closing={closing}
+            inert={closing}
             data-connection-create-menu
-            style={{ left: pending.position.x, top: pending.position.y, background: theme.node.panel, borderColor: theme.node.stroke, color: theme.node.text }}
+            style={{ left: pending.position.x, top: pending.position.y }}
             onMouseDown={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}
         >
@@ -71,7 +75,7 @@ export function ConnectionCreateOption({ theme, icon, title, description, onClic
     );
 }
 
-export function NodeCreateMenu({ position, onCreate, onClose }: { position: Position; onCreate: (type: string) => void; onClose: () => void }) {
+export function NodeCreateMenu({ position, onCreate, onClose, closing }: { position: Position; onCreate: (type: string) => void; onClose: () => void; closing: boolean }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     useNodeRegistryVersion();
     const menuRef = useRef<HTMLDivElement>(null);
@@ -87,9 +91,11 @@ export function NodeCreateMenu({ position, onCreate, onClose }: { position: Posi
     return (
         <div
             ref={menuRef}
-            className="absolute z-[120] max-h-[70vh] w-[300px] overflow-y-auto rounded-[18px] border p-3 shadow-2xl backdrop-blur thin-scrollbar"
+            className="menu-surface menu-motion absolute z-[120] max-h-[70vh] w-[300px] max-w-[calc(100vw-24px)] overflow-y-auto p-3 thin-scrollbar"
+            data-closing={closing}
+            inert={closing}
             data-canvas-no-zoom
-            style={{ left: position.x, top: position.y, background: theme.node.panel, borderColor: theme.node.stroke, color: theme.node.text }}
+            style={{ left: position.x, top: position.y }}
             onPointerDown={(event) => event.stopPropagation()}
         >
             <div className="mb-2 flex items-center justify-between px-1">

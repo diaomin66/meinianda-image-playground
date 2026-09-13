@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
+import { MOTION_DURATION, MOTION_EASE } from '../lib/motion'
+import { useExitPresence } from '../hooks/useExitPresence'
 import { useStore } from '../store'
 import { useTooltip } from '../hooks/useTooltip'
 import { dismissAllTooltips } from '../lib/tooltipDismiss'
@@ -19,6 +22,7 @@ const APP_MODES: { mode: AppMode; label: string }[] = [
   { mode: 'canvas', label: '无限画布' },
   { mode: 'gallery', label: '画廊' },
   { mode: 'agent', label: 'Agent' },
+  { mode: 'characters', label: '人物（beta）' },
 ]
 
 function isInstalledPwa() {
@@ -35,23 +39,13 @@ function AppModeNav({
   mobile?: boolean
   onChange: (mode: AppMode) => void
 }) {
-  const activeIndex = APP_MODES.findIndex((item) => item.mode === appMode)
-  const reducedMotion = useReducedMotion()
+  const reducedMotion = usePrefersReducedMotion()
 
   return (
     <nav aria-label="工作区" className={mobile
-      ? 'app-mode-nav relative mx-2 grid h-[42px] grid-cols-3 items-center gap-1 rounded-xl border border-gray-200/80 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]'
-      : 'app-mode-nav relative mr-3 hidden h-[42px] w-[238px] shrink-0 self-center grid-cols-3 items-center gap-1 rounded-xl border border-gray-200/80 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04] sm:grid'}
+      ? 'app-mode-nav relative mx-2 grid h-[42px] grid-cols-[1fr_0.7fr_0.8fr_1.3fr] items-center gap-1 rounded-xl border border-gray-200/80 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]'
+      : 'app-mode-nav relative mr-3 hidden h-[42px] w-[360px] shrink-0 self-center grid-cols-[1fr_0.7fr_0.8fr_1.3fr] items-center gap-1 rounded-xl border border-gray-200/80 bg-gray-100/70 p-1 dark:border-white/[0.08] dark:bg-white/[0.04] sm:grid'}
     >
-      <motion.span
-        data-app-mode-indicator
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-1 left-1 top-1 rounded-lg bg-white shadow-sm ring-1 ring-black/[0.04] dark:bg-white/10 dark:ring-white/[0.06]"
-        style={{ width: 'calc((100% - 1rem) / 3)' }}
-        initial={false}
-        animate={{ x: `calc(${activeIndex * 100}% + ${activeIndex * 0.25}rem)` }}
-        transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38, mass: 0.8 }}
-      />
       {APP_MODES.map((item) => {
         const active = appMode === item.mode
         return (
@@ -60,13 +54,22 @@ function AppModeNav({
             type="button"
             onClick={() => onChange(item.mode)}
             aria-pressed={active}
-            className={`relative flex h-8 min-w-0 items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium leading-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 ${mobile ? 'px-1' : 'px-2'} ${
+            className={`relative flex h-8 min-w-0 items-center justify-center whitespace-nowrap rounded-lg font-medium leading-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 ${mobile ? 'px-1 text-xs min-[400px]:text-sm' : 'px-2 text-sm'} ${
               active
                 ? 'text-gray-900 dark:text-white'
                 : 'text-gray-500 hover:bg-black/[0.03] hover:text-gray-800 dark:hover:bg-white/[0.04] dark:hover:text-gray-200'
             }`}
           >
-            {item.label}
+            {active && (
+              <motion.span
+                data-app-mode-indicator
+                aria-hidden="true"
+                layoutId={`app-mode-indicator-${mobile ? 'mobile' : 'desktop'}`}
+                className="pointer-events-none absolute inset-0 rounded-lg bg-white shadow-sm ring-1 ring-black/[0.04] dark:bg-white/10 dark:ring-white/[0.06]"
+                transition={{ duration: reducedMotion ? 0 : MOTION_DURATION.standard / 1000, ease: MOTION_EASE }}
+              />
+            )}
+            <span className="relative">{item.label}</span>
           </button>
         )
       })}
@@ -90,12 +93,14 @@ export default function Header() {
   const favoriteCollectionTitle = useFavoriteCollectionTitle()
   const showFavoriteCollectionTitle = appMode === 'gallery' && Boolean(activeFavoriteCollectionId)
   const [showHelp, setShowHelp] = useState(false)
+  const helpPresence = useExitPresence(showHelp ? true : null)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isPwaInstalled, setIsPwaInstalled] = useState(isInstalledPwa)
   const [hintVisible, setHintVisible] = useState(false)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down'>('up')
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const historyPresence = useExitPresence(showHistoryModal ? true : null)
   const historyButtonRef = useRef<HTMLButtonElement>(null)
   const createConversation = useStore((s) => s.createAgentConversation)
   const switchAppMode = (mode: AppMode) => {
@@ -221,7 +226,7 @@ export default function Header() {
 
   return (
     <>
-      <header data-no-drag-select className={`app-header safe-area-top fixed top-0 left-0 right-0 z-40 overflow-x-clip bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-white/[0.08] transition-transform duration-300 ease-in-out ${appMode === 'canvas' ? 'app-header-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? '-translate-y-full sm:translate-y-0' : 'translate-y-0'}`}>
+      <header data-no-drag-select className={`app-header safe-area-top fixed top-0 left-0 right-0 z-40 overflow-x-clip bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-white/[0.08] transition-transform duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${appMode === 'canvas' ? 'app-header-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? '-translate-y-full sm:translate-y-0' : 'translate-y-0'}`}>
         <div className="app-header-inner safe-area-x safe-header-inner max-w-7xl mx-auto flex items-center justify-between relative">
           <div className="flex-1 min-w-0 pr-2 flex items-center gap-2">
             <h1 className="app-header-brand relative mr-2 inline-flex min-w-0 max-w-[52vw] items-start sm:max-w-none">
@@ -259,8 +264,8 @@ export default function Header() {
               >
                 <EditIcon className="w-5 h-5" />
               </button>
-              {showHistoryModal && (
-                <HistoryModal onClose={() => setShowHistoryModal(false)} ignoreOutsideClickRef={historyButtonRef} />
+              {historyPresence.value && (
+                <HistoryModal closing={historyPresence.closing} onClose={() => setShowHistoryModal(false)} ignoreOutsideClickRef={historyButtonRef} />
               )}
             </div>}
           </div>
@@ -369,25 +374,25 @@ export default function Header() {
             </div>
           </div>
         </div>
-        <div className={`safe-area-x sm:hidden overflow-hidden transition-all duration-300 ease-in-out ${appMode === 'gallery' && scrollDirection === 'down' ? 'max-h-0 opacity-0 pb-0' : 'max-h-20 opacity-100 pb-2'}`}>
+        <div className={`safe-area-x sm:hidden overflow-hidden transition-[max-height,opacity,padding] duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${appMode === 'gallery' && scrollDirection === 'down' ? 'max-h-0 opacity-0 pb-0' : 'max-h-20 opacity-100 pb-2'}`}>
           <AppModeNav appMode={appMode} mobile onChange={switchAppMode} />
         </div>
       </header>
       
       {/* Hint for sliding down */}
-      <div className={`fixed top-0 left-0 right-0 z-30 flex justify-center pointer-events-none transition-all duration-300 ease-in-out sm:hidden ${appMode === 'agent' && hintVisible && !agentMobileHeaderVisible ? 'translate-y-[env(safe-area-inset-top,0px)] opacity-100' : '-translate-y-full opacity-0'}`}>
+      <div className={`fixed top-0 left-0 right-0 z-30 flex justify-center pointer-events-none transition-[transform,opacity] duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] sm:hidden ${appMode === 'agent' && hintVisible && !agentMobileHeaderVisible ? 'translate-y-[env(safe-area-inset-top,0px)] opacity-100' : '-translate-y-full opacity-0'}`}>
         <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-b-xl shadow-lg">
           下拉展示顶栏
         </div>
       </div>
 
-      <div className={`app-header-spacer safe-area-top invisible shrink-0 border-b border-transparent pointer-events-none transition-[max-height,opacity] duration-300 ease-in-out ${appMode === 'canvas' ? 'app-header-spacer-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? 'max-h-0 sm:max-h-[500px] opacity-0 sm:opacity-100 overflow-hidden sm:overflow-visible' : 'max-h-[500px] opacity-100'}`} aria-hidden="true">
+      <div className={`app-header-spacer safe-area-top invisible shrink-0 border-b border-transparent pointer-events-none transition-[max-height,opacity] duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${appMode === 'canvas' ? 'app-header-spacer-canvas' : ''} ${appMode === 'agent' && !agentMobileHeaderVisible ? 'max-h-0 sm:max-h-[500px] opacity-0 sm:opacity-100 overflow-hidden sm:overflow-visible' : 'max-h-[500px] opacity-100'}`} aria-hidden="true">
         <div className="safe-header-inner" />
-        <div className={`safe-area-x sm:hidden overflow-hidden transition-all duration-300 ease-in-out ${appMode === 'gallery' && scrollDirection === 'down' ? 'max-h-0 pb-0' : 'max-h-20 pb-2'}`}>
+        <div className={`safe-area-x sm:hidden overflow-hidden transition-[max-height,opacity,padding] duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${appMode === 'gallery' && scrollDirection === 'down' ? 'max-h-0 pb-0' : 'max-h-20 pb-2'}`}>
           <div className="h-[42px]" />
         </div>
       </div>
-      {showHelp && <HelpModal appMode={appMode} isFavoriteCollectionOverview={appMode === 'gallery' && filterFavorite && !activeFavoriteCollectionId} onClose={() => setShowHelp(false)} />}
+      {helpPresence.value && <HelpModal closing={helpPresence.closing} appMode={appMode} isFavoriteCollectionOverview={appMode === 'gallery' && filterFavorite && !activeFavoriteCollectionId} onClose={() => setShowHelp(false)} />}
     </>
   )
 }

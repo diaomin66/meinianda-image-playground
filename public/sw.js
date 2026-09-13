@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'meinianda-image-playground-v'
-const CACHE_NAME = `${CACHE_PREFIX}0.8.2`
+const CACHE_NAME = `${CACHE_PREFIX}0.9.0-beta.1`
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './pwa-icon.svg']
 const APP_SHELL_URLS = new Set(APP_SHELL.map((path) => new URL(path, self.registration.scope).href))
 const ASSETS_PATH = new URL('./assets/', self.registration.scope).pathname

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import type { AgentMessage, AgentRound, TaskRecord } from '../types'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import { editOutputs, regenerateAgentAssistantMessage, removeMultipleTasks, removeTask, reuseConfig, useStore } from '../store'
 import { getActiveAgentRounds, getAgentBranchLeafId, getConversationSearchText, getLatestAgentConversation, getAgentRoundTaskIds, getAgentSiblingRounds } from '../lib/agentConversationState'
 import { ensureImageCached, getCachedImage } from '../lib/imageCache'
@@ -110,6 +111,7 @@ function getPageScrollTop() {
 }
 
 export default function AgentWorkspace() {
+  const reducedMotion = usePrefersReducedMotion()
   const conversations = useStore((s) => s.agentConversations)
   const conversationsLoaded = useStore((s) => s.agentConversationsLoaded)
   const activeConversationId = useStore((s) => s.activeAgentConversationId)
@@ -171,8 +173,8 @@ export default function AgentWorkspace() {
 
   const scrollToAgentBottom = useCallback(() => {
     const scrollingElement = document.scrollingElement ?? document.documentElement
-    window.scrollTo({ top: scrollingElement.scrollHeight, behavior: 'smooth' })
-  }, [])
+    window.scrollTo({ top: scrollingElement.scrollHeight, behavior: reducedMotion ? 'instant' : 'smooth' })
+  }, [reducedMotion])
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const touchY = e.touches[0]?.clientY ?? -1
@@ -598,7 +600,7 @@ export default function AgentWorkspace() {
   return (
     <main 
       data-agent-workspace 
-      className="safe-area-x mx-auto flex min-h-[calc(100vh-100px)] flex-col lg:flex-row max-w-7xl lg:gap-3 px-3 lg:px-0 relative overflow-visible transition-all duration-300"
+      className="safe-area-x mx-auto flex min-h-[calc(100vh-100px)] flex-col lg:flex-row max-w-7xl lg:gap-3 px-3 lg:px-0 relative overflow-visible"
     >
       {/* Pull Down Indicator */}
       {pullDownOffset > 0 && !agentMobileHeaderVisible && (
@@ -618,7 +620,7 @@ export default function AgentWorkspace() {
       )}
       
       {/* Left Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-4/5 max-w-[320px] flex-col border-r border-gray-200 bg-white/95 shadow-2xl backdrop-blur transition-transform duration-300 dark:border-white/[0.08] dark:bg-gray-950/95 lg:hidden ${!sidebarCollapsed ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-4/5 max-w-[320px] flex-col border-r border-gray-200 bg-white/95 shadow-2xl backdrop-blur transition-transform duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-white/[0.08] dark:bg-gray-950/95 lg:hidden ${!sidebarCollapsed ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="pl-[max(1rem,env(safe-area-inset-left))] flex h-full min-h-0 w-full flex-col">
           <div className="safe-area-top shrink-0">
             <div className="flex h-14 items-center justify-between gap-2 px-4">
@@ -677,7 +679,7 @@ export default function AgentWorkspace() {
                     <div className="text-xs text-gray-400">{formatTime(item.updatedAt)}</div>
                   </button>
                 )}
-                <div className={`flex shrink-0 items-center gap-1 overflow-hidden transition-all duration-150 ${agentEditingConversationId === item.id ? 'w-6 opacity-100' : `group-hover:w-[4.5rem] group-hover:opacity-100 group-focus-within:w-[4.5rem] group-focus-within:opacity-100 ${conversationActionsId === item.id ? 'w-[4.5rem] opacity-100' : 'w-0 opacity-0'}`}`}>
+                <div className={`flex shrink-0 items-center gap-1 overflow-hidden transition-[width,opacity] duration-150 ${agentEditingConversationId === item.id ? 'w-6 opacity-100' : `group-hover:w-[4.5rem] group-hover:opacity-100 group-focus-within:w-[4.5rem] group-focus-within:opacity-100 ${conversationActionsId === item.id ? 'w-[4.5rem] opacity-100' : 'w-0 opacity-0'}`}`}>
                   {agentEditingConversationId === item.id ? (
                     <AgentActionButton
                       tooltip="确认"
@@ -710,7 +712,7 @@ export default function AgentWorkspace() {
       {/* Center Chat Area */}
       <section className="min-w-0 flex-1 flex flex-col relative">
         {/* Mobile Header Toggles */}
-        <div className={`sticky top-0 z-20 lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileTopBarVisible ? 'max-h-16 opacity-100 mb-2' : 'max-h-0 opacity-0 mb-0 pointer-events-none'}`}>
+        <div className={`sticky top-0 z-20 lg:hidden overflow-hidden transition-[max-height,opacity,margin] duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileTopBarVisible ? 'max-h-16 opacity-100 mb-2' : 'max-h-0 opacity-0 mb-0 pointer-events-none'}`}>
           <div
             className="flex h-14 items-center justify-between border-b border-gray-200 bg-white/80 px-2 backdrop-blur dark:border-white/[0.08] dark:bg-gray-950/80"
             onTouchStart={handleHeaderTouchStart}
@@ -788,7 +790,7 @@ export default function AgentWorkspace() {
                       className={`group flex max-w-[95%] flex-col md:max-w-[85%] lg:max-w-[75%] ${isAssistant ? 'items-start' : 'items-end'}`}
                     >
                       <article 
-                        className={`relative flex min-w-[16rem] max-w-full flex-col rounded-2xl p-4 transition-all duration-200 ${
+                        className={`relative flex min-w-[16rem] max-w-full flex-col rounded-2xl p-4 transition-colors duration-150 ${
                         isAssistant 
                           ? 'bg-white/70 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.08] rounded-tl-sm hover:bg-white dark:hover:bg-white/[0.04]' 
                           : `bg-gray-100 dark:bg-[#2A2D31] rounded-tr-sm ${isEditing ? 'ring-2 ring-blue-500/50 dark:ring-blue-400/50' : ''}`
@@ -1018,9 +1020,9 @@ export default function AgentWorkspace() {
                           <span className="inline-flex items-center gap-1.5">
                             <span>正在生成回复</span>
                             <span className="flex gap-1">
-                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
-                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
+                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-current" />
+                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-current [animation-delay:150ms]" />
+                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-current [animation-delay:300ms]" />
                             </span>
                           </span>
                         </div>
@@ -1036,7 +1038,7 @@ export default function AgentWorkspace() {
 
         <button
           onClick={scrollToAgentBottom}
-          className={`fixed bottom-[calc(var(--input-bar-clearance,12rem)+1.5rem)] left-1/2 -translate-x-1/2 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-[0_2px_12px_rgba(0,0,0,0.1)] border border-gray-200/50 text-gray-500 transition-all duration-300 hover:bg-gray-50 hover:text-gray-800 dark:border-white/[0.08] dark:bg-gray-800/90 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 ${
+          className={`fixed bottom-[calc(var(--input-bar-clearance,12rem)+1.5rem)] left-1/2 -translate-x-1/2 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-[0_2px_12px_rgba(0,0,0,0.1)] border border-gray-200/50 text-gray-500 transition-[transform,opacity,background-color,color] duration-200 hover:bg-gray-50 hover:text-gray-800 dark:border-white/[0.08] dark:bg-gray-800/90 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 ${
             !isScrolledToBottom && activeMessages.length > 0 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
           }`}
           aria-label="滚动到底部"

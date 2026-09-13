@@ -225,8 +225,8 @@ function MentionMenu({ rect, references, activeIndex, theme, onSelect }: { rect:
     return createPortal(
         <div
             data-canvas-resource-mention-menu="true"
-            className="fixed z-[120] max-h-56 w-64 overflow-y-auto rounded-xl border p-1 shadow-2xl backdrop-blur-md"
-            style={{ left, top, background: theme.toolbar.panel, borderColor: theme.toolbar.border, color: theme.node.text }}
+            className="menu-surface menu-motion fixed z-[120] max-h-56 w-64 overflow-y-auto p-1.5"
+            style={{ left, top }}
             onPointerDown={stopCanvasInteraction}
             onMouseDown={stopCanvasInteraction}
             onClick={(event) => event.stopPropagation()}
@@ -236,8 +236,8 @@ function MentionMenu({ rect, references, activeIndex, theme, onSelect }: { rect:
                     key={reference.id}
                     ref={index === activeIndex ? activeItemRef : undefined}
                     type="button"
-                    className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition"
-                    style={{ background: index === activeIndex ? theme.toolbar.activeBg : "transparent", color: index === activeIndex ? theme.toolbar.activeText : theme.node.text }}
+                    className="menu-item flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-xs"
+                    data-selected={index === activeIndex}
                     onPointerDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();

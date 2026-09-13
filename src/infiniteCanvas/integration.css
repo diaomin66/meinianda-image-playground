@@ -237,6 +237,72 @@
   backdrop-filter: blur(12px);
 }
 
+/* 选择浮层与主界面共用材质；动画仍由组件库负责挂载和卸载。 */
+.infinite-canvas-module .ant-popover .ant-popover-inner,
+.infinite-canvas-module .ant-dropdown .ant-dropdown-menu,
+.infinite-canvas-module .ant-select-dropdown,
+.infinite-canvas-module [data-slot='select-content'] {
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: var(--menu-bg) !important;
+  box-shadow: var(--menu-shadow), inset 0 0 0 1px var(--menu-edge) !important;
+  backdrop-filter: blur(16px);
+  overscroll-behavior: contain;
+}
+.infinite-canvas-module .ant-dropdown .ant-dropdown-menu,
+.infinite-canvas-module .ant-select-dropdown { padding: 6px !important; }
+.infinite-canvas-module :is(.ant-dropdown-menu-item, .ant-dropdown-menu-submenu-title, .ant-select-item-option) {
+  border-radius: 12px !important;
+  min-height: 36px;
+}
+.infinite-canvas-module :is(.ant-select-item-option-selected, .ant-dropdown-menu-item-selected) {
+  background: var(--menu-selected) !important;
+  color: var(--menu-accent) !important;
+}
+.infinite-canvas-module [data-slot='select-content'] { transform-origin: var(--radix-select-content-transform-origin); }
+.infinite-canvas-module [data-slot='select-item'] { color: var(--menu-text); }
+.infinite-canvas-module [data-slot='select-item'][data-state='checked'] { color: var(--menu-accent); }
+.infinite-canvas-module [data-slot='select-trigger'] .canvas-select-chevron {
+  transition: transform var(--motion-standard) var(--motion-ease), color var(--motion-fast) ease;
+}
+.infinite-canvas-module [data-slot='select-trigger'][data-state='open'] .canvas-select-chevron {
+  transform: rotate(180deg);
+  color: var(--menu-accent);
+}
+
+/* 抽屉四角悬浮，留出安全边距；只过渡位移，避免表单随布局抖动。 */
+.infinite-canvas-module .ant-drawer .ant-drawer-content-wrapper {
+  max-width: calc(100vw - 24px);
+  box-shadow: none;
+  transition: transform var(--motion-panel) var(--motion-ease);
+}
+.infinite-canvas-module .ant-drawer:is(.ant-drawer-left, .ant-drawer-right) > .ant-drawer-content-wrapper {
+  top: 12px;
+  bottom: 12px;
+}
+.infinite-canvas-module .ant-drawer.ant-drawer-right > .ant-drawer-content-wrapper { right: 12px; }
+.infinite-canvas-module .ant-drawer.ant-drawer-left > .ant-drawer-content-wrapper { left: 12px; }
+.infinite-canvas-module .ant-drawer :is(.ant-drawer-content, .ant-drawer-section) {
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: var(--menu-bg) !important;
+  box-shadow: var(--menu-shadow), inset 0 0 0 1px var(--menu-edge) !important;
+}
+.infinite-canvas-module .ant-drawer .ant-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 0;
+}
+.infinite-canvas-module .ant-drawer .ant-drawer-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--menu-hover);
+}
+@media (pointer: coarse) {
+  .infinite-canvas-module :is(.ant-dropdown-menu-item, .ant-dropdown-menu-submenu-title) { min-height: 44px; }
+}
+
 .infinite-canvas-module.dark .ant-tooltip .ant-tooltip-inner {
   border-color: rgba(255, 255, 255, 0.1);
   background: rgba(9, 9, 11, 0.96);

@@ -10,7 +10,7 @@ vi.mock('@canvas/services/agent-chat-storage', () => ({
   saveDirectAgentConversations: storage.saveDirectAgentConversations,
 }))
 
-import { useAgentStore, type DirectAgentConversation } from './use-agent-store'
+import { CANVAS_AGENT_PANEL_MOTION_MS, useAgentStore, type DirectAgentConversation } from './use-agent-store'
 
 function conversation(id: string, updatedAt: number): DirectAgentConversation {
   return {
@@ -27,6 +27,23 @@ function conversation(id: string, updatedAt: number): DirectAgentConversation {
 }
 
 describe('canvas Agent window state', () => {
+  it('快速重复开关时保留本次完整退出时间', () => {
+    vi.useFakeTimers()
+    try {
+      useAgentStore.getState().openPanel()
+      useAgentStore.getState().closePanel()
+      vi.advanceTimersByTime(100)
+      useAgentStore.getState().openPanel()
+      useAgentStore.getState().closePanel()
+      vi.advanceTimersByTime(CANVAS_AGENT_PANEL_MOTION_MS - 100)
+      expect(useAgentStore.getState().panelClosing).toBe(true)
+      vi.advanceTimersByTime(100)
+      expect(useAgentStore.getState().panelClosing).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   beforeEach(() => {
     storage.readDirectAgentConversations.mockReset()
     storage.saveDirectAgentConversations.mockClear()
